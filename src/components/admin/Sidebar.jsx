@@ -1,3 +1,4 @@
+// components/admin/Sidebar.jsx
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -13,7 +14,12 @@ export default function Sidebar({ onClose }) {
   const { currentUser, logout } = useAuth();
 
   const initials = currentUser?.displayName
-    ? currentUser.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    ? currentUser.displayName
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
     : 'A';
 
   return (
@@ -27,7 +33,10 @@ export default function Sidebar({ onClose }) {
 
       {/* Nav */}
       <nav className="flex-1 py-3">
-        <p className="px-4 py-1 text-[10px] uppercase tracking-widest text-white/35">Menu</p>
+        <p className="px-4 py-1 text-[10px] uppercase tracking-widest text-white/35">
+          Menu
+        </p>
+
         {navItems.map(({ label, path }) => (
           <NavLink
             key={path}
@@ -54,8 +63,12 @@ export default function Sidebar({ onClose }) {
             {initials}
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-medium truncate">{currentUser?.displayName || 'Admin'}</p>
-            <p className="text-[11px] text-white/40 truncate">{currentUser?.email}</p>
+            <p className="text-xs font-medium truncate">
+              {currentUser?.displayName || 'Admin'}
+            </p>
+            <p className="text-[11px] text-white/40 truncate">
+              {currentUser?.email}
+            </p>
           </div>
         </div>
       </div>

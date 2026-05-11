@@ -1,228 +1,234 @@
-import React, { useContext, useState } from 'react';
-import { ExamContext } from '../../context/ExamContext';
+import React, { useContext, useEffect, useState } from "react";
+import { ExamContext } from "../../context/ExamContext";
 
-// ✅ imageSize → height class
 const SIZE_CLASS = {
-  small: 'h-32 md:h-40',
-  medium: 'h-52 md:h-64',
-  large: 'h-64 md:h-80',
-  full: 'h-72 md:h-96 lg:h-[28rem]',
+  small: "h-28 md:h-36",
+  medium: "h-44 md:h-56",
+  large: "h-56 md:h-72",
+  full: "h-72 md:h-[28rem]",
 };
 
 const QuestionCard = () => {
   const { exam, currentQuestionId } = useContext(ExamContext);
+
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const [imageZoomed, setImageZoomed] = useState(false);
+  const [zoomed, setZoomed] = useState(false);
 
-  const currentQuestion = exam.questions.find(q => q.id === currentQuestionId);
-  const questionNumber = exam.questions.findIndex(q => q.id === currentQuestionId) + 1;
+  const currentQuestion = exam.questions.find(
+    (q) => q.id === currentQuestionId
+  );
 
-  React.useEffect(() => {
+  const questionNumber =
+    exam.questions.findIndex((q) => q.id === currentQuestionId) + 1;
+
+  useEffect(() => {
     setImageLoaded(false);
     setImageError(false);
-    setImageZoomed(false);
+    setZoomed(false);
   }, [currentQuestionId]);
 
-  if (!currentQuestion) {
-    return <div className="text-red-500 font-medium">Question not found</div>;
-  }
+  if (!currentQuestion) return null;
 
-  const imageUrl = (currentQuestion.imageUrl || '').replace('http://', 'https://');
+  const imageUrl = (currentQuestion.imageUrl || "").replace(
+    "http://",
+    "https://"
+  );
+
   const hasText = !!currentQuestion.text?.trim();
   const hasImage = !!imageUrl && !imageError;
 
-  // ✅ Use imageSize field to drive height
-  const heightClass = SIZE_CLASS[currentQuestion.imageSize || 'medium'];
+  const heightClass =
+    SIZE_CLASS[currentQuestion.imageSize || "medium"];
 
   const layoutMode = !hasText && hasImage
-    ? 'image-only'
+    ? "image-only"
     : hasText && !hasImage
-      ? 'text-only'
-      : hasText && hasImage && currentQuestion.text.trim().length <= 120
-        ? 'text-top'
-        : 'text-image';
+      ? "text-only"
+      : hasText &&
+        hasImage &&
+        currentQuestion.text.trim().length <= 120
+        ? "text-top"
+        : "split";
 
   return (
     <>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-4">
+      <div className="overflow-hidden rounded-2xl border border-border bg-surface">
 
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50">
-          <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-              {questionNumber}
-            </span>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-widest">
-              of {exam.questions.length}
-            </span>
+        {/* Minimal Header */}
+        <div className="flex items-center justify-between px-4 pt-3">
+
+          <h2 className="text-sm font-semibold text-text-dark">
+            Question {questionNumber}
+          </h2>
+
+          <div className="rounded-full bg-emerald-bg px-2 py-0.5 text-[10px] font-semibold text-emerald">
+            +{currentQuestion.marks}
           </div>
-          <span className="text-xs font-bold bg-primary/10 text-primary px-3 py-1 rounded-full">
-            +{currentQuestion.marks} {currentQuestion.marks === 1 ? 'mark' : 'marks'}
-          </span>
+
         </div>
 
         {/* Body */}
-        <div className="p-5 md:p-6">
+        <div className="px-4 pb-4 pt-2">
 
-          {/* IMAGE-ONLY */}
-          {layoutMode === 'image-only' && (
+          {/* IMAGE ONLY */}
+          {layoutMode === "image-only" && (
             <QuestionImage
               imageUrl={imageUrl}
-              questionNumber={questionNumber}
               imageLoaded={imageLoaded}
               imageError={imageError}
               setImageLoaded={setImageLoaded}
               setImageError={setImageError}
-              setImageZoomed={setImageZoomed}
+              setZoomed={setZoomed}
               heightClass={heightClass}
-              maxWClass="max-w-full"
             />
           )}
 
-          {/* TEXT-ONLY */}
-          {layoutMode === 'text-only' && (
-            <p className="text-gray-800 text-base md:text-lg font-medium leading-relaxed whitespace-pre-line">
-              {currentQuestion.text}
-            </p>
-          )}
-
-          {/* SHORT TEXT + image below */}
-          {layoutMode === 'text-top' && (
-            <div>
-              <p className="text-gray-800 text-base md:text-lg font-semibold leading-relaxed whitespace-pre-line mb-5">
+          {/* TEXT ONLY */}
+          {layoutMode === "text-only" && (
+            <div className="max-w-5xl">
+              <p className="whitespace-pre-line text-[15px] leading-7 text-text-dark md:text-base">
                 {currentQuestion.text}
               </p>
+            </div>
+          )}
+
+          {/* TEXT TOP */}
+          {layoutMode === "text-top" && (
+            <div className="space-y-4">
+
+              <p className="whitespace-pre-line text-[15px] leading-7 text-text-dark md:text-base">
+                {currentQuestion.text}
+              </p>
+
               <QuestionImage
                 imageUrl={imageUrl}
-                questionNumber={questionNumber}
                 imageLoaded={imageLoaded}
                 imageError={imageError}
                 setImageLoaded={setImageLoaded}
                 setImageError={setImageError}
-                setImageZoomed={setImageZoomed}
+                setZoomed={setZoomed}
                 heightClass={heightClass}
-                maxWClass="max-w-full"
               />
+
             </div>
           )}
 
-          {/* LONGER TEXT + image side-by-side */}
-          {layoutMode === 'text-image' && (
-            <div className="flex flex-col md:flex-row md:gap-6 gap-5">
-              <div className="md:flex-1">
-                <p className="text-gray-800 text-base md:text-lg font-medium leading-relaxed whitespace-pre-line">
+          {/* SPLIT LAYOUT */}
+          {layoutMode === "split" && (
+            <div className="flex flex-col gap-5 lg:flex-row">
+
+              <div className="min-w-0 flex-1">
+                <p className="whitespace-pre-line text-[15px] leading-7 text-text-dark md:text-base">
                   {currentQuestion.text}
                 </p>
               </div>
-              <div className="md:w-72 lg:w-96 flex-shrink-0">
+
+              <div className="lg:w-[340px] shrink-0">
                 <QuestionImage
                   imageUrl={imageUrl}
-                  questionNumber={questionNumber}
                   imageLoaded={imageLoaded}
                   imageError={imageError}
                   setImageLoaded={setImageLoaded}
                   setImageError={setImageError}
-                  setImageZoomed={setImageZoomed}
+                  setZoomed={setZoomed}
                   heightClass={heightClass}
-                  maxWClass="w-full"
                   fill
                 />
               </div>
+
             </div>
           )}
-
         </div>
       </div>
 
-      {/* Fullscreen lightbox */}
-      {imageZoomed && imageUrl && (
+      {/* Zoom Modal */}
+      {zoomed && imageUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 md:p-8"
-          onClick={() => setImageZoomed(false)}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setZoomed(false)}
         >
+
           <button
-            onClick={() => setImageZoomed(false)}
-            className="absolute top-4 right-4 bg-white/20 hover:bg-white/40 text-white rounded-full w-10 h-10 flex items-center justify-center text-xl font-bold z-10 transition-colors"
+            onClick={() => setZoomed(false)}
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-lg text-white backdrop-blur hover:bg-white/20"
           >
             ✕
           </button>
+
           <img
             src={imageUrl}
-            alt={`Question ${questionNumber} (zoomed)`}
-            className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+            alt="Zoomed"
+            className="max-h-full max-w-full rounded-2xl object-contain"
             onClick={(e) => e.stopPropagation()}
           />
-          <p className="absolute bottom-4 text-white/50 text-xs">
-            Click anywhere outside to close
-          </p>
+
         </div>
       )}
     </>
   );
 };
 
-/* ── Reusable image block ─────────────────────────────────── */
-const QuestionImage = ({
+function QuestionImage({
   imageUrl,
-  questionNumber,
   imageLoaded,
-  imageError,          // ✅ added
+  imageError,
   setImageLoaded,
   setImageError,
-  setImageZoomed,
+  setZoomed,
   heightClass,
-  maxWClass,
   fill = false,
-}) => (
-  <div className={`relative w-full ${maxWClass} mx-auto`}>
+}) {
+  return (
+    <div className="relative w-full">
 
-    {/* ✅ Skeleton only when not loaded AND no error */}
-    {!imageLoaded && !imageError && (
-      <div className={`${heightClass} w-full bg-gray-100 rounded-xl flex items-center justify-center`}>
-        <svg className="w-8 h-8 text-gray-300" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-        </svg>
-      </div>
-    )}
+      {/* Loader */}
+      {!imageLoaded && !imageError && (
+        <div
+          className={`${heightClass} flex w-full items-center justify-center rounded-xl bg-background`}
+        >
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-border border-t-accent" />
+        </div>
+      )}
 
-    {/* Actual image */}
-    <div
-      className={`
-        group relative rounded-xl overflow-hidden border border-gray-100
-        ${imageLoaded ? 'block' : 'hidden'}
-        ${fill ? `${heightClass} w-full` : ''}
-      `}
-    >
-      <img
-        src={imageUrl}
-        alt={`Question ${questionNumber}`}
-        onClick={() => setImageZoomed(true)}
-        onLoad={() => setImageLoaded(true)}
-        onError={() => setImageError(true)}
+      {/* Image */}
+      <div
         className={`
-          cursor-zoom-in
-          ${fill
-            ? 'w-full h-full object-contain'  // ✅ object-contain not object-cover
-            : `block mx-auto object-contain ${heightClass} w-auto max-w-full`
-          }
+          group relative overflow-hidden rounded-xl border border-border
+          ${imageLoaded ? "block" : "hidden"}
+          ${fill ? `${heightClass} w-full` : ""}
         `}
-      />
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none rounded-xl" />
-      <button
-        onClick={() => setImageZoomed(true)}
-        className="absolute bottom-2 right-2 bg-black/50 hover:bg-black/70 text-white text-xs px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
       >
-        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0zm0 0l4 4" />
-        </svg>
-        Zoom
-      </button>
+
+        <img
+          src={imageUrl}
+          alt="Question"
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageError(true)}
+          onClick={() => setZoomed(true)}
+          className={`
+            cursor-zoom-in object-contain
+
+            ${fill
+              ? "h-full w-full"
+              : `${heightClass} mx-auto block max-w-full`
+            }
+          `}
+        />
+
+        {/* Hover */}
+        <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/5" />
+
+        {/* Zoom Button */}
+        <button
+          onClick={() => setZoomed(true)}
+          className="absolute bottom-2 right-2 rounded-lg bg-black/60 px-2 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur transition group-hover:opacity-100"
+        >
+          Zoom
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+}
 
 export default QuestionCard;

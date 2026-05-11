@@ -1,67 +1,118 @@
+// pages/admin/AdminExams.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getExams, toggleExamActive, toggleExamResults, deleteExam } from '../../services/exam.service';
+import {
+  getExams,
+  toggleExamActive,
+  toggleExamResults,
+  deleteExam,
+} from '../../services/exam.service';
 
-function Badge({ children, color }) {
-  const map = {
-    blue: 'bg-blue-50 text-blue-800',
-    gray: 'bg-gray-100 text-gray-600',
-    green: 'bg-green-100 text-green-800',
-    yellow: 'bg-yellow-100 text-yellow-800',
-  };
-  return (
-    <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${map[color] ?? map.gray}`}>
-      {children}
-    </span>
-  );
-}
+import Button from '../../components/ui/Button.jsx';
+import Card from '../../components/ui/Card.jsx';
+import Badge from '../../components/ui/Badge.jsx';
+import Loader from '../../components/ui/Loader.jsx';
+import EmptyState from '../../components/ui/EmptyState.jsx';
+import ConfirmDialog from '../../components/ui/ConfirmDialog.jsx';
+import { MdOutlineLeaderboard } from 'react-icons/md';
 
+// ─── Toggle ──────────────────────────────────────────────────────────────────
 function Toggle({ checked, onChange, disabled }) {
   return (
     <button
       type="button"
+      role="switch"
       disabled={disabled}
       onClick={() => onChange(!checked)}
       aria-checked={checked}
-      className={`relative inline-flex w-9 h-5 rounded-full transition-colors flex-shrink-0
-        ${checked ? 'bg-answered' : 'bg-black/15'}
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+      className={[
+        'relative inline-flex w-9 h-5 rounded-full transition-colors duration-200 flex-shrink-0',
+        checked ? 'bg-success' : 'bg-black/15',
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+      ].join(' ')}
     >
-      <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-all
-        ${checked ? 'left-[18px]' : 'left-0.5'}`} />
+      <span
+        className={[
+          'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all duration-200',
+          checked ? 'left-[18px]' : 'left-0.5',
+        ].join(' ')}
+      />
     </button>
   );
 }
 
-function ExamMobileCard({ exam, onToggleActive, onToggleResults, onDelete, onOpen, saving }) {
+// ─── Mobile Card ─────────────────────────────────────────────────────────────
+function ExamMobileCard({
+  exam,
+  onToggleActive,
+  onToggleResults,
+  onDelete,
+  onOpen,
+  onSubmissions,
+  saving,
+}) {
   return (
-    <div className="border border-black/8 rounded-xl p-4 bg-surface space-y-3">
+    <Card className="p-4 sm:p-5 space-y-3.5">
+      {/* Title + Badges */}
       <div>
-        <p className="text-sm font-medium text-text-dark">{exam.title}</p>
-        <div className="flex flex-wrap gap-1.5 mt-1.5">
-          <Badge color="blue">Gr {exam.grade}</Badge>
-          <Badge color="gray">{exam.batchId}</Badge>
-          <Badge color="gray">{exam.duration === 0 ? 'Unlimited' : `${exam.duration} min`}</Badge>
+        <p className="text-sm font-semibold text-text-dark leading-snug">
+          {exam.title}
+        </p>
+        <div className="flex flex-wrap gap-2 mt-2.5">
+          <Badge variant="info">Gr {exam.grade}</Badge>
+          <Badge variant="neutral">{exam.batchId}</Badge>
+          <Badge variant="neutral">
+            {exam.duration === 0 ? 'Unlimited' : `${exam.duration} min`}
+          </Badge>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-text-dark/60">
-        <label className="flex items-center gap-2">
-          <Toggle checked={exam.isActive} onChange={v => onToggleActive(exam.id, v)} disabled={saving === exam.id} />
-          Active
+
+      {/* Toggles */}
+      <div className="flex flex-col gap-3 text-xs text-text-muted">
+        <label className="flex items-center gap-3 select-none cursor-pointer">
+          <Toggle
+            checked={exam.isActive}
+            onChange={(v) => onToggleActive(exam.id, v)}
+            disabled={saving === exam.id}
+          />
+          <span>Active</span>
         </label>
-        <label className="flex items-center gap-2">
-          <Toggle checked={exam.isResultPublished} onChange={v => onToggleResults(exam.id, v)} disabled={saving === exam.id} />
-          Results
+        <label className="flex items-center gap-3 select-none cursor-pointer">
+          <Toggle
+            checked={exam.isResultPublished}
+            onChange={(v) => onToggleResults(exam.id, v)}
+            disabled={saving === exam.id}
+          />
+          <span>Results Published</span>
         </label>
       </div>
-      <div className="flex gap-4 pt-1 border-t border-black/6">
-        <button onClick={() => onOpen(exam.id)} className="text-xs text-accent hover:underline">Open</button>
-        <button onClick={() => onDelete(exam)} className="text-xs text-red-500 hover:underline">Delete</button>
+
+      {/* Actions */}
+      <div className="flex items-center gap-4 pt-3 border-t border-border">
+        <button
+          onClick={() => onOpen(exam.id)}
+          className="text-xs font-medium text-accent hover:underline transition-colors"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => onSubmissions(exam.id)}
+          className="text-xs font-medium text-text-muted hover:text-text-dark hover:underline transition-colors"
+        >
+          Submissions
+        </button>
+        <button
+          onClick={() => onDelete(exam)}
+          className="text-xs font-medium text-danger hover:underline transition-colors ml-auto"
+        >
+          Delete
+        </button>
       </div>
-    </div>
+    </Card>
   );
 }
 
+// ─── Main Page ───────────────────────────────────────────────────────────────
 export default function AdminExams() {
   const navigate = useNavigate();
   const [exams, setExams] = useState([]);
@@ -71,7 +122,9 @@ export default function AdminExams() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   async function load() {
     setLoading(true);
@@ -89,18 +142,28 @@ export default function AdminExams() {
     setSaving(id);
     try {
       await toggleExamActive(id, val);
-      setExams(p => p.map(e => e.id === id ? { ...e, isActive: val } : e));
-    } catch { setError('Toggle failed.'); }
-    finally { setSaving(null); }
+      setExams((p) =>
+        p.map((e) => (e.id === id ? { ...e, isActive: val } : e))
+      );
+    } catch {
+      setError('Toggle failed.');
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function handleToggleResults(id, val) {
     setSaving(id);
     try {
       await toggleExamResults(id, val);
-      setExams(p => p.map(e => e.id === id ? { ...e, isResultPublished: val } : e));
-    } catch { setError('Toggle failed.'); }
-    finally { setSaving(null); }
+      setExams((p) =>
+        p.map((e) => (e.id === id ? { ...e, isResultPublished: val } : e))
+      );
+    } catch {
+      setError('Toggle failed.');
+    } finally {
+      setSaving(null);
+    }
   }
 
   async function handleDelete() {
@@ -108,131 +171,242 @@ export default function AdminExams() {
     setDeleting(true);
     try {
       await deleteExam(deleteTarget.id);
-      setExams(p => p.filter(e => e.id !== deleteTarget.id));
+      setExams((p) => p.filter((e) => e.id !== deleteTarget.id));
       setDeleteTarget(null);
-    } catch { setError('Delete failed.'); }
-    finally { setDeleting(false); }
+    } catch {
+      setError('Delete failed.');
+    } finally {
+      setDeleting(false);
+    }
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 mb-5">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-3 mb-6 sm:mb-8">
         <div>
-          <h2 className="text-lg font-medium text-text-dark">Exams</h2>
-          <p className="text-sm text-text-dark/50 mt-0.5">Create and manage exams</p>
+          <h2 className="text-xl sm:text-2xl font-semibold text-text-dark">
+            Exams
+          </h2>
+          <p className="text-sm text-text-muted mt-1">
+            Create and manage exams
+          </p>
         </div>
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => navigate('/admin/exams/create')}
-          className="text-xs bg-primary text-white px-3.5 py-2 rounded-lg hover:bg-accent transition-colors whitespace-nowrap flex-shrink-0"
+          className="w-full sm:w-auto"
         >
           + Create Exam
-        </button>
+        </Button>
       </div>
 
-      {/* Error banner */}
+      {/* ── Error Banner ── */}
       {error && (
-        <div className="mb-4 flex justify-between items-center text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          {error}
-          <button onClick={() => setError('')} className="ml-3 text-red-400 hover:text-red-600 font-bold">×</button>
+        <div className="mb-4 sm:mb-6 flex justify-between items-center text-sm bg-danger-bg border border-danger/20 rounded-lg px-4 py-3 text-danger">
+          <span>{error}</span>
+          <button
+            onClick={() => setError('')}
+            className="ml-3 text-danger/50 hover:text-danger text-lg leading-none font-bold"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Loading */}
+      {/* ── Loading ── */}
       {loading && (
-        <div className="bg-surface border border-black/8 rounded-xl p-12 text-center">
-          <p className="text-sm text-text-dark/40 animate-pulse">Loading exams…</p>
-        </div>
+        <Card className="py-16 flex items-center justify-center">
+          <Loader />
+        </Card>
       )}
 
-      {/* Empty */}
+      {/* ── Empty ── */}
       {!loading && exams.length === 0 && (
-        <div className="bg-surface border border-dashed border-black/15 rounded-xl p-12 text-center">
-          <p className="text-sm text-text-dark/40">No exams yet.</p>
-          <button onClick={() => navigate('/admin/exams/create')}
-            className="mt-3 text-xs text-accent hover:underline">+ Create your first exam</button>
-        </div>
+        <EmptyState
+          title="No exams yet"
+          description="Get started by creating your first exam."
+          action={
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/admin/exams/create')}
+            >
+              + Create your first exam
+            </Button>
+          }
+        />
       )}
 
-      {/* Desktop table */}
+      {/* ── Content ── */}
       {!loading && exams.length > 0 && (
         <>
-          <div className="hidden md:block bg-surface border border-black/8 rounded-xl p-4">
-            <p className="text-sm font-medium text-text-dark mb-4">All Exams ({exams.length})</p>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left border-b border-black/8">
-                    {['Title', 'Grade', 'Batch', 'Duration', 'Active', 'Results', ''].map((h, i) => (
-                      <th key={i} className="pb-2.5 text-[11px] font-medium text-text-dark/45 tracking-wide pr-4 last:pr-0">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-black/6">
-                  {exams.map(e => (
-                    <tr key={e.id}>
-                      <td className="py-2.5 pr-4 font-medium text-text-dark">
-                        <span className="max-w-[180px] truncate block">{e.title}</span>
-                      </td>
-                      <td className="py-2.5 pr-4"><Badge color="blue">Gr {e.grade}</Badge></td>
-                      <td className="py-2.5 pr-4"><Badge color="gray">{e.batchId}</Badge></td>
-                      <td className="py-2.5 pr-4 text-xs text-text-dark/55">
-                        {e.duration === 0 ? 'Unlimited' : `${e.duration} min`}
-                      </td>
-                      <td className="py-2.5 pr-4">
-                        <Toggle checked={e.isActive} onChange={v => handleToggleActive(e.id, v)} disabled={saving === e.id} />
-                      </td>
-                      <td className="py-2.5 pr-4">
-                        <Toggle checked={e.isResultPublished} onChange={v => handleToggleResults(e.id, v)} disabled={saving === e.id} />
-                      </td>
-                      <td className="py-2.5">
-                        <button onClick={() => navigate(`/admin/exams/${e.id}`)}
-                          className="text-[12px] text-accent hover:underline mr-3">Open</button>
-                        <button onClick={() => setDeleteTarget({ id: e.id, title: e.title })}
-                          className="text-[12px] text-red-500 hover:underline">Delete</button>
-                      </td>
+          {/* ── Desktop Table ── */}
+          <div className="hidden md:block">
+            <Card className="p-6">
+              <h3 className="text-sm font-semibold text-text-dark mb-4">
+                All Exams
+                <span className="ml-2 text-text-faint font-normal">
+                  ({exams.length})
+                </span>
+              </h3>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b border-border">
+                      {[
+                        'Title',
+                        'Grade',
+                        'Batch',
+                        'Duration',
+                        'Active',
+                        'Results',
+                        '',
+                      ].map((h, i) => (
+                        <th
+                          key={i}
+                          className="pb-3 pr-4 last:pr-0 text-xs font-semibold text-text-faint tracking-wider uppercase"
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {exams.map((e) => (
+                      <tr
+                        key={e.id}
+                        className="hover:bg-black/[0.02] transition-colors"
+                      >
+                        <td className="py-4 pr-4 font-medium text-text-dark">
+                          <span className="max-w-[250px] truncate block">
+                            {e.title}
+                          </span>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <Badge variant="info">Gr {e.grade}</Badge>
+                        </td>
+                        <td className="py-4 pr-4">
+                          <Badge variant="neutral">{e.batchId}</Badge>
+                        </td>
+                        <td className="py-4 pr-4 text-sm text-text-muted">
+                          {e.duration === 0
+                            ? 'Unlimited'
+                            : `${e.duration} min`}
+                        </td>
+                        <td className="py-4 pr-4">
+                          <Toggle
+                            checked={e.isActive}
+                            onChange={(v) => handleToggleActive(e.id, v)}
+                            disabled={saving === e.id}
+                          />
+                        </td>
+                        <td className="py-4 pr-4">
+                          <Toggle
+                            checked={e.isResultPublished}
+                            onChange={(v) => handleToggleResults(e.id, v)}
+                            disabled={saving === e.id}
+                          />
+                        </td>
+                        <td className="py-4 pr-0">
+                          <div className="flex items-center gap-4">
+                            <button
+                              onClick={() =>
+                                navigate(`/admin/exams/${e.id}/edit`)
+                              }
+                              className="text-xs font-medium text-accent hover:underline transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/admin/exams/${e.id}/submissions`
+                                )
+                              }
+                              className="text-xs font-medium text-text-muted hover:text-text-dark hover:underline transition-colors"
+                            >
+                              Submissions
+                            </button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                navigate(
+                                  `/leaderboard?type=exam&examId=${e.id}&batchId=${e.batchId}`
+                                )
+                              }
+                            >
+                              <MdOutlineLeaderboard className="text-base" />
+                            </Button>
+                            <button
+                              onClick={() =>
+                                setDeleteTarget({
+                                  id: e.id,
+                                  title: e.title,
+                                })
+                              }
+                              className="text-xs font-medium text-danger hover:underline transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
           </div>
 
-          {/* Mobile cards */}
-          <div className="md:hidden space-y-3">
-            {exams.map(e => (
-              <ExamMobileCard key={e.id} exam={e} saving={saving}
+          {/* ── Mobile Cards ── */}
+          <div className="md:hidden space-y-3.5">
+            <p className="text-xs font-semibold text-text-faint uppercase tracking-wider px-1">
+              All Exams ({exams.length})
+            </p>
+            {exams.map((e) => (
+              <ExamMobileCard
+                key={e.id}
+                exam={e}
+                saving={saving}
                 onToggleActive={handleToggleActive}
                 onToggleResults={handleToggleResults}
-                onDelete={ex => setDeleteTarget({ id: ex.id, title: ex.title })}
-                onOpen={id => navigate(`/admin/exams/${id}`)}
+                onDelete={(ex) =>
+                  setDeleteTarget({ id: ex.id, title: ex.title })
+                }
+                onOpen={(id) => navigate(`/admin/exams/${id}/edit`)}
+                onSubmissions={(id) =>
+                  navigate(`/admin/exams/${id}/submissions`)
+                }
               />
             ))}
           </div>
         </>
       )}
 
-      {/* Delete confirm */}
-      {deleteTarget && (
-        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-5 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-semibold text-text-dark mb-1">Delete Exam?</h3>
-            <p className="text-sm text-text-dark/55 mb-4">
-              "<span className="font-medium text-text-dark">{deleteTarget.title}</span>" and all its questions will be permanently deleted.
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setDeleteTarget(null)}
-                className="flex-1 border border-black/15 text-sm text-text-dark py-2 rounded-lg hover:bg-black/3">
-                Cancel
-              </button>
-              <button onClick={handleDelete} disabled={deleting}
-                className="flex-1 bg-red-500 text-white text-sm py-2 rounded-lg hover:bg-red-600 disabled:opacity-50">
-                {deleting ? 'Deleting…' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Delete Confirm ── */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Exam?"
+        description={
+          <>
+            "
+            <span className="font-semibold text-text-dark">
+              {deleteTarget?.title}
+            </span>
+            " and all its questions will be permanently deleted. This action
+            cannot be undone.
+          </>
+        }
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        confirmVariant="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

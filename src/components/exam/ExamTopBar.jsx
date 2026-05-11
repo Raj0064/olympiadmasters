@@ -1,21 +1,49 @@
-const ExamTopBar = ({ title, formattedTime, onHamburgerClick }) => {
+const ExamTopBar = ({
+  title,
+  formattedTime,
+  onHamburgerClick,
+}) => {
   return (
-    <div className="bg-primary text-white flex items-center justify-between px-4 md:px-8 py-3 shrink-0">
-      <div className="flex items-center gap-3">
+    <header className="grid h-12 shrink-0 grid-cols-3 items-center border-b border-border bg-surface px-3 md:px-5">
+
+      {/* Left */}
+      <div className="flex min-w-0 items-center gap-2">
+
         <button
-          className="md:hidden flex flex-col gap-1 p-1"
+          className="flex md:hidden"
           onClick={onHamburgerClick}
         >
-          <span className="w-5 h-0.5 bg-white block"></span>
-          <span className="w-5 h-0.5 bg-white block"></span>
-          <span className="w-5 h-0.5 bg-white block"></span>
+          <svg
+            className="h-5 w-5 text-text-dark"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
         </button>
-        <h1 className="text-sm md:text-lg font-bold tracking-wide">{title}</h1>
+
+        <h1 className="truncate text-sm font-semibold text-text-dark md:text-[15px]">
+          {title}
+        </h1>
       </div>
-      <span className="font-mono text-xl md:text-2xl font-bold text-white bg-accent px-4 py-1 rounded-lg">
-        {formattedTime}
-      </span>
-    </div>
+
+      {/* Center Timer */}
+      <div className="flex justify-center">
+        <div className="rounded-full bg-accent/10 px-4 py-1 font-mono text-sm font-bold tracking-wide text-accent md:text-xl">
+          {formattedTime}
+        </div>
+      </div>
+
+      {/* Right Spacer */}
+      <div />
+
+    </header>
   );
 };
 

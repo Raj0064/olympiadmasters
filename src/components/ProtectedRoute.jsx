@@ -1,10 +1,10 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ children, role }) => {
+const ProtectedRoute = ({ children, role, roles }) => {
   const { currentUser, userProfile, loading } = useAuth();
 
-  // Still checking auth state — show spinner
+  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -16,19 +16,29 @@ const ProtectedRoute = ({ children, role }) => {
     );
   }
 
-  // Not logged in → send to login
+  // Not logged in
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
 
-  // Admin route → non-admin tries to access → send to dashboard
-  if (role === "admin" && userProfile?.role !== "admin") {
-    return <Navigate to="/dashboard" replace />;
+  // Single role check
+  if (role && userProfile?.role !== role) {
+    return (
+      <Navigate
+        to={userProfile?.role === "admin" ? "/admin" : "/dashboard"}
+        replace
+      />
+    );
   }
 
-  // Student route → admin tries to access → send to admin panel
-  if (!role && userProfile?.role === "admin") {
-    return <Navigate to="/admin" replace />;
+  // Multiple roles check
+  if (roles && !roles.includes(userProfile?.role)) {
+    return (
+      <Navigate
+        to={userProfile?.role === "admin" ? "/admin" : "/dashboard"}
+        replace
+      />
+    );
   }
 
   return children;

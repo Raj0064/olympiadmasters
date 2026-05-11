@@ -1,68 +1,56 @@
-import React, { useState, useContext } from 'react';
-import { ExamContext } from '../../context/ExamContext';
+import React, { useContext } from "react";
+import { ExamContext } from "../../context/ExamContext";
 
 const SectionTabs = () => {
-  const { exam, currentQuestionId, setCurrentQuestionId } = useContext(ExamContext);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { exam, currentQuestionId, setCurrentQuestionId } =
+    useContext(ExamContext);
 
-  const currentQuestion = exam.questions.find(q => q.id === currentQuestionId);
+  const currentQuestion = exam.questions.find(
+    (q) => q.id === currentQuestionId
+  );
+
   const activeSectionId = currentQuestion?.sectionId;
-  const activeSection = exam.sections.find(s => s.id === activeSectionId);
 
   const handleSectionClick = (sectionId) => {
-    const firstQuestion = exam.questions.find(q => q.sectionId === sectionId);
-    if (firstQuestion) setCurrentQuestionId(firstQuestion.id);
-    setDropdownOpen(false);
+    const firstQuestion = exam.questions.find(
+      (q) => q.sectionId === sectionId
+    );
+
+    if (firstQuestion) {
+      setCurrentQuestionId(firstQuestion.id);
+    }
   };
 
   return (
-    <>
-      {/* Desktop Tabs */}
-      <div className="hidden md:flex overflow-x-auto px-6 gap-1">
-        {exam.sections.map((section) => (
+    // Reduced top padding (pt-2 instead of pt-4) for a smaller footprint
+    <div className="flex items-end gap-1 overflow-x-auto px-4 pt-2 -mb-[1px]">
+
+      {exam.sections.map((section) => {
+        const isActive = activeSectionId === section.id;
+
+        return (
           <button
             key={section.id}
             onClick={() => handleSectionClick(section.id)}
-            className={`whitespace-nowrap px-6 py-2 text-sm font-semibold transition rounded-t-xl
-              ${activeSectionId === section.id
-                ? 'bg-surface text-primary border-b-4 border-accent'
-                : 'text-white opacity-60 hover:opacity-100'
-              }`}
+            className={`
+              relative whitespace-nowrap px-3 text-xs font-medium transition-all duration-200
+              /* Smaller curve (rounded-t-md) for tiny tabs */
+              rounded-t-md border-x border-t
+              
+              ${isActive
+                // Active: Very small height (pt-1.5 pb-1)
+                ? "bg-accent text-white border-accent pt-1.5 pb-1 z-10"
+                // Inactive: Barely peeping out (pt-0.5 pb-1)
+                : "bg-surface text-text-dark/70 border-border border-b-transparent hover:bg-black/5 pt-0.5 pb-1 hover:pt-1"
+              }
+            `}
           >
-            {section.label}
+            {section.name}
           </button>
-        ))}
-      </div>
+        );
+      })}
 
-      {/* Mobile Dropdown */}
-      <div className="md:hidden relative px-3 py-2">
-        <button
-          onClick={() => setDropdownOpen(prev => !prev)}
-          className="w-full flex items-center justify-between bg-surface text-primary font-semibold text-sm px-4 py-2 rounded-xl"
-        >
-          <span>{activeSection?.label}</span>
-          <span>{dropdownOpen ? '▲' : '▼'}</span>
-        </button>
-
-        {dropdownOpen && (
-          <div className="absolute top-full left-3 right-3 bg-surface rounded-xl shadow-lg z-50 overflow-hidden mt-1">
-            {exam.sections.map((section) => (
-              <button
-                key={section.id}
-                onClick={() => handleSectionClick(section.id)}
-                className={`w-full text-left px-4 py-3 text-sm font-semibold transition
-                  ${activeSectionId === section.id
-                    ? 'bg-accent text-white'
-                    : 'text-primary hover:bg-gray-100'
-                  }`}
-              >
-                {section.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </>
+    </div>
   );
 };
 

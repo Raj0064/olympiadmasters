@@ -1,33 +1,55 @@
-import React, { useContext } from 'react';
-import { ExamContext } from '../../context/ExamContext';
+import React, { useContext, useMemo } from "react";
+import { ExamContext } from "../../context/ExamContext";
 
 const OptionSelector = () => {
-  const { exam, currentQuestionId, answers, setAnswers } = useContext(ExamContext);
+  const { exam, currentQuestionId, answers, setAnswers } =
+    useContext(ExamContext);
 
-  const currentQuestion = exam.questions.find(q => q.id === currentQuestionId);
-  if (!currentQuestion) return null;
+  // ✅ Memoize current question lookup
+  const currentQuestion = useMemo(() => {
+    return exam?.questions?.find((q) => q.id === currentQuestionId);
+  }, [exam, currentQuestionId]);
+
+  if (!currentQuestion || !currentQuestion.options) return null;
 
   const selectedAnswer = answers[currentQuestionId];
 
   const handleSelect = (key) => {
-    setAnswers(prev => ({ ...prev, [currentQuestionId]: key }));
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestionId]: key,
+    }));
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-6">
-      {Object.entries(currentQuestion.options).map(([key, val]) => (
-        <button
-          key={key}
-          onClick={() => handleSelect(key)}
-          className={`w-full text-left px-4 py-3 rounded-xl border-2 font-medium text-sm md:text-base transition
-            ${selectedAnswer === key
-              ? 'bg-accent text-white border-accent shadow-md'
-              : 'bg-surface text-text-dark border-gray-200 hover:border-accent hover:text-accent'
-            }`}
-        >
-          <span className="font-bold mr-3 text-inherit">{key}.</span>{val}
-        </button>
-      ))}
+    <div
+      className="mt-6 flex flex-wrap gap-3"
+      role="radiogroup"
+      aria-label="Answer options"
+    >
+      {Object.entries(currentQuestion.options).map(([key]) => {
+        const isSelected = selectedAnswer === key;
+
+        return (
+          <button
+            key={key}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            onClick={() => handleSelect(key)}
+            className={`flex h-12 w-12 items-center justify-center rounded-xl
+              border-2 text-sm font-bold transition-all duration-150
+              focus:outline-none focus:ring-2 focus:ring-accent
+              ${isSelected
+                ? "bg-accent text-white border-accent shadow-md scale-105"
+                : "bg-surface text-text-dark border-border hover:border-accent hover:text-accent"
+              }
+            `}
+          >
+            {key}
+          </button>
+        );
+      })}
     </div>
   );
 };

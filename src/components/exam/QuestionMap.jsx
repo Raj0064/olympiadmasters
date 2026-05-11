@@ -1,90 +1,116 @@
-import React, { useContext } from 'react';
-import { ExamContext } from '../../context/ExamContext';
+import React, { useContext } from "react";
+import { ExamContext } from "../../context/ExamContext";
 
 const QuestionMap = () => {
-  const { exam, answers, currentQuestionId, visitedQuestions, setCurrentQuestionId } = useContext(ExamContext);
+  const {
+    exam,
+    answers,
+    currentQuestionId,
+    visitedQuestions,
+    setCurrentQuestionId,
+  } = useContext(ExamContext);
 
   const getStatus = (questionId) => {
-    if (questionId === currentQuestionId) return 'active';
-    if (answers[questionId]) return 'answered';
-    if (visitedQuestions.has(questionId)) return 'skipped';
-    return 'unseen';
+    if (questionId === currentQuestionId) return "active";
+    if (answers[questionId]) return "answered";
+    if (visitedQuestions.has(questionId)) return "skipped";
+    return "unseen";
   };
 
-  // Question number button colours — unchanged from original
   const getStyle = (questionId) => {
     const status = getStatus(questionId);
-    if (status === 'active') return 'bg-accent text-white scale-110 shadow-md';
-    if (status === 'answered') return 'bg-answered text-white';
-    if (status === 'skipped') return 'bg-skipped text-black';
-    return 'bg-unseen text-black border border-gray-300';
+
+    if (status === "active") {
+      return "bg-accent/90 text-white border border-primary shadow-sm scale-105";
+    }
+
+    if (status === "answered") {
+      return "bg-success/20 text-success border border-success/40";
+    }
+
+    if (status === "skipped") {
+      return "bg-warning-bg text-warning border border-warning/20";
+    }
+
+    return "bg-surface text-text-muted border border-border hover:bg-primary/5 hover:border-primary/20";
   };
 
-  const answeredCount = exam.questions.filter(q => answers[q.id]).length;
+  const answeredCount = exam.questions.filter((q) => answers[q.id]).length;
+
   const skippedCount = exam.questions.filter(
-    q => !answers[q.id] && visitedQuestions.has(q.id) && q.id !== currentQuestionId
+    (q) =>
+      !answers[q.id] &&
+      visitedQuestions.has(q.id) &&
+      q.id !== currentQuestionId
   ).length;
+
   const unseenCount = exam.questions.length - answeredCount;
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full flex-col">
 
-      {/* ── Summary (3 rows only) ── */}
-      <div className="flex flex-col gap-2 shrink-0 pb-3 border-b border-gray-200">
+      {/* Summary */}
+      <div className="shrink-0 border-b border-border pb-3">
 
-        {/* Answered */}
-        <div className="flex items-center gap-3">
-          <span className="bg-answered text-white text-xs font-bold px-2 py-1 rounded-md min-w-[36px] text-center">
+        <div className="flex items-center gap-2">
+          <span className="rounded-md bg-success-bg px-2 py-1 text-xs font-bold text-success min-w-[34px] text-center">
             {answeredCount}
           </span>
-          <span className="text-xs font-medium text-black">Answered</span>
+          <span className="text-xs text-text-dark">Answered</span>
         </div>
 
-        {/* Skipped / Visited not answered */}
-        <div className="flex items-center gap-3">
-          <span className="bg-skipped text-black text-xs font-bold px-2 py-1 rounded-md min-w-[36px] text-center">
+        <div className="mt-2 flex items-center gap-2">
+          <span className="rounded-md bg-warning-bg px-2 py-1 text-xs font-semibold text-warning min-w-[34px] text-center">
             {skippedCount}
           </span>
-          <span className="text-xs font-medium text-black">Skipped (visited)</span>
+          <span className="text-xs text-text-dark">Skipped</span>
         </div>
 
-        {/* Not seen — grey in summary, white in grid */}
-        <div className="flex items-center gap-3">
-          <span className="bg-gray-400 text-white text-xs font-bold px-2 py-1 rounded-md min-w-[36px] text-center">
+        <div className="mt-2 flex items-center gap-2">
+          <span className="rounded-md bg-text-muted/90 px-2 py-1 text-xs font-semibold text-white min-w-[34px] text-center">
             {unseenCount}
           </span>
-          <span className="text-xs font-medium text-black">Not Answered</span>
+          <span className="text-xs text-text-dark">Not Answered</span>
         </div>
-
       </div>
 
-      {/* ── Question grid (scrollable) ── */}
-      <div className="flex flex-col gap-4 mt-3 overflow-y-auto flex-1">
+      {/* Grid */}
+      <div className="mt-3 flex flex-1 flex-col gap-4 overflow-y-auto">
+
         {exam.sections.map((section) => {
-          const sectionQuestions = exam.questions.filter(q => q.sectionId === section.id);
-          const questionIndex = (q) => exam.questions.findIndex(eq => eq.id === q.id) + 1;
+          const sectionQuestions = exam.questions.filter(
+            (q) => q.sectionId === section.id
+          );
+
+          const questionIndex = (q) =>
+            exam.questions.findIndex((eq) => eq.id === q.id) + 1;
 
           return (
             <div key={section.id} className="flex flex-col gap-2">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                {section.label}
+
+              <p className="text-[11px] font-bold uppercase tracking-widest text-text-faint">
+                {section.name}
               </p>
+
               <div className="flex flex-wrap gap-2">
+
                 {sectionQuestions.map((q) => (
                   <button
                     key={q.id}
                     onClick={() => setCurrentQuestionId(q.id)}
-                    className={`w-9 h-9 rounded-lg text-xs font-bold transition-transform hover:opacity-80 ${getStyle(q.id)}`}
+                    className={`flex h-9 w-9 items-center justify-center rounded-lg text-xs font-semibold transition-all hover:scale-105 ${getStyle(
+                      q.id
+                    )}`}
                   >
                     {questionIndex(q)}
                   </button>
                 ))}
+
               </div>
             </div>
           );
         })}
       </div>
-
     </div>
   );
 };

@@ -1,12 +1,62 @@
 @import "tailwindcss";
 
 @theme {
+
+  /* Brand */
   --color-primary: #1E3A5F;
+  --color-primary-hover: #16324F;
+
   --color-accent: #2563EB;
-  --color-background: #F8FAFC;
+  --color-accent-hover: #1D4ED8;
+
+
+  /* Backgrounds */
+  --color-background: #F5F7FA;
   --color-surface: #FFFFFF;
+
+
+  /* Text */
   --color-text-dark: #0F172A;
-  --color-answered: #22C55E;
-  --color-skipped: #EAB308;
-  --color-unseen: #FFFFFF;
+  --color-text-muted: #64748B;
+  --color-text-faint: #94A3B8;
+
+
+  /* Borders */
+  --color-border: rgba(15, 23, 42, 0.08);
+  --color-border-strong: rgba(15, 23, 42, 0.14);
+
+
+  /* Success */
+  --color-success: #16A34A;
+  --color-success-bg: #DCFCE7;
+
+
+  /* Warning */
+  --color-warning: #D97706;
+  --color-warning-bg: #FEF3C7;
+
+
+  /* Danger */
+  --color-danger: #DC2626;
+  --color-danger-bg: #FEE2E2;
+
+
+  /* Info */
+  --color-info: #0284C7;
+  --color-info-bg: #E0F2FE;
+
+
+  /* Premium Badge Colors */
+
+  --color-sky: #0369A1;
+  --color-sky-bg: #E0F2FE;
+
+  --color-indigo: #4338CA;
+  --color-indigo-bg: #EEF2FF;
+
+  --color-emerald: #047857;
+  --color-emerald-bg: #ECFDF5;
+
+  --color-blue-soft: #1D4ED8;
+  --color-blue-soft-bg: #EFF6FF;
 }

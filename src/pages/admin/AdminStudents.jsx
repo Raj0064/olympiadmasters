@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getStudents, createStudent, deleteStudent } from '../../services/student.service';
 import { getBatches } from '../../services/batch.service';
 import { useNavigate } from 'react-router-dom';
+import { BulkImportStudentsButton } from '../../components/admin/create_exam/BulkStudentImport';
 
 const GRADES = ['4', '5', '6', '7', '8'];
 
@@ -250,6 +251,9 @@ export default function AdminStudents() {
           <p className="text-sm font-medium text-text-dark">
             All Students{!loading && ` (${filtered.length})`}
           </p>
+
+          <BulkImportStudentsButton onImported={load} />
+
           <button
             onClick={() => setShowModal(true)}
             className="text-xs bg-primary text-white px-3.5 py-2 rounded-lg hover:bg-accent transition-colors"

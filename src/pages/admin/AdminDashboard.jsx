@@ -1,4 +1,7 @@
 import StatCard from '../../components/admin/StatCard';
+import Badge from '../../components/ui/Badge';
+import Card from '../../components/ui/Card';
+import PageHeader from '../../components/ui/PageHeader';
 
 const recentExams = [
   { title: 'Math Olympiad Mock 3', grade: 'Grade 8', status: 'Active' },
@@ -12,64 +15,125 @@ const recentSubmissions = [
   { name: 'Arjun Nair', exam: 'Science Sprint', score: '68/100' },
 ];
 
-const statusColors = {
-  Active: 'bg-green-100 text-green-800',
-  Completed: 'bg-blue-100  text-blue-800',
-  Draft: 'bg-gray-100  text-gray-600',
+const statusVariant = {
+  Active: 'success',
+  Completed: 'info',
+  Draft: 'neutral',
 };
 
 export default function AdminDashboard() {
   return (
     <div>
-      <div className="mb-5">
-        <h2 className="text-lg font-medium text-text-dark">Overview</h2>
-        <p className="text-sm text-text-dark/50 mt-0.5">Quick snapshot of your platform</p>
+
+      {/* Header */}
+      <PageHeader
+        title="Overview"
+        description="Quick snapshot of your platform"
+      />
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 gap-3 mb-5 lg:grid-cols-4">
+        <StatCard
+          label="Total Students"
+          value="48"
+          sub="across all batches"
+        />
+
+        <StatCard
+          label="Batches"
+          value="5"
+          sub="active this year"
+        />
+
+        <StatCard
+          label="Exams"
+          value="12"
+          sub="3 scheduled"
+        />
+
+        <StatCard
+          label="Submissions"
+          value="310"
+          sub="this session"
+        />
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
-        <StatCard label="Total Students" value="48" sub="across all batches" />
-        <StatCard label="Batches" value="5" sub="active this year" />
-        <StatCard label="Exams" value="12" sub="3 scheduled" />
-        <StatCard label="Submissions" value="310" sub="this session" />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
 
-      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Recent Exams */}
+        <Card className="p-4">
 
-        {/* Recent exams */}
-        <div className="bg-surface border border-black/8 rounded-xl p-4">
-          <p className="text-sm font-medium text-text-dark mb-3">Recent Exams</p>
-          <div className="divide-y divide-black/6">
-            {recentExams.map((e) => (
-              <div key={e.title} className="flex items-center justify-between py-2.5">
+          <p className="mb-3 text-sm font-medium text-text-dark">
+            Recent Exams
+          </p>
+
+          <div className="divide-y divide-border">
+
+            {recentExams.map((exam) => (
+              <div
+                key={exam.title}
+                className="flex items-center justify-between py-2.5"
+              >
+
                 <div>
-                  <p className="text-sm text-text-dark">{e.title}</p>
-                  <p className="text-xs text-text-dark/45 mt-0.5">{e.grade}</p>
+                  <p className="text-sm text-text-dark">
+                    {exam.title}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-text-muted">
+                    {exam.grade}
+                  </p>
                 </div>
-                <span className={`text-[11px] px-2.5 py-1 rounded-full ${statusColors[e.status]}`}>
-                  {e.status}
-                </span>
+
+                <Badge variant={statusVariant[exam.status]}>
+                  {exam.status}
+                </Badge>
+
               </div>
             ))}
-          </div>
-        </div>
 
-        {/* Recent submissions */}
-        <div className="bg-surface border border-black/8 rounded-xl p-4">
-          <p className="text-sm font-medium text-text-dark mb-3">Recent Submissions</p>
-          <div className="divide-y divide-black/6">
-            {recentSubmissions.map((s) => (
-              <div key={s.name} className="flex items-center justify-between py-2.5">
+          </div>
+
+        </Card>
+
+        {/* Recent Submissions */}
+        <Card className="p-4">
+
+          <p className="mb-3 text-sm font-medium text-text-dark">
+            Recent Submissions
+          </p>
+
+          <div className="divide-y divide-border">
+
+            {recentSubmissions.map((submission) => (
+              <div
+                key={submission.name}
+                className="flex items-center justify-between py-2.5"
+              >
+
                 <div>
-                  <p className="text-sm text-text-dark">{s.name}</p>
-                  <p className="text-xs text-text-dark/45 mt-0.5">{s.exam}</p>
+                  <p className="text-sm text-text-dark">
+                    {submission.name}
+                  </p>
+
+                  <p className="mt-0.5 text-xs text-text-muted">
+                    {submission.exam}
+                  </p>
                 </div>
-                <p className="text-sm font-medium text-text-dark">{s.score}</p>
+
+                <p className="text-sm font-medium text-text-dark">
+                  {submission.score}
+                </p>
+
               </div>
             ))}
+
           </div>
-        </div>
+
+        </Card>
+
       </div>
+
     </div>
   );
 }

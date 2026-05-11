@@ -26,7 +26,11 @@ const blankQ = () => ({
   tags: [],
 });
 
-// ─── TagInput ─────────────────────────────────────────────────────────────────
+// Add this once near the top (alongside uid, blankQ)
+const normalizeNewlines = (str) =>
+  (str || '').replace(/\\n/g, '\n').replace(/\\t/g, '\t').trim();
+
+// ─── TagInput ──────────────────────────────────────────────────────────────────
 function TagInput({ tags, onChange, placeholder = 'Type & press Enter…' }) {
   const [val, setVal] = useState('');
   const add = () => {
@@ -35,26 +39,45 @@ function TagInput({ tags, onChange, placeholder = 'Type & press Enter…' }) {
     setVal('');
   };
   return (
-    <div className="flex flex-wrap gap-1.5 p-2 border border-black/10 rounded-lg min-h-[38px] bg-white focus-within:border-accent transition-colors">
+    <div className="
+      flex flex-wrap gap-1.5 p-2 min-h-[38px]
+      bg-surface border border-border rounded-lg
+      focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/10
+      transition-all duration-150
+    ">
       {tags.map(t => (
-        <span key={t} className="flex items-center gap-1 text-xs bg-accent/10 text-accent px-2 py-0.5 rounded-full">
+        <span
+          key={t}
+          className="
+            flex items-center gap-1 text-xs font-medium
+            bg-indigo-bg text-indigo px-2 py-0.5 rounded-full
+          "
+        >
           {t}
-          <button type="button" onClick={() => onChange(tags.filter(x => x !== t))} className="hover:text-red-500">×</button>
+          <button
+            type="button"
+            onClick={() => onChange(tags.filter(x => x !== t))}
+            className="hover:text-danger transition-colors leading-none"
+          >
+            ×
+          </button>
         </span>
       ))}
       <input
-        className="text-xs outline-none flex-1 min-w-[80px] bg-transparent placeholder-text-dark/30"
+        className="text-xs outline-none flex-1 min-w-[80px] bg-transparent placeholder:text-text-faint text-text-dark"
         placeholder={placeholder}
         value={val}
         onChange={e => setVal(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(); } }}
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(); }
+        }}
         onBlur={add}
       />
     </div>
   );
 }
 
-// ─── ImageAttach ──────────────────────────────────────────────────────────────
+// ─── ImageAttach ───────────────────────────────────────────────────────────────
 function ImageAttach({ label, imageUrl, uploading, onUpload, onRemove, folder }) {
   const ref = useRef(null);
   return (
@@ -74,17 +97,37 @@ function ImageAttach({ label, imageUrl, uploading, onUpload, onRemove, folder })
         type="button"
         onClick={() => ref.current?.click()}
         disabled={uploading}
-        className="mt-1.5 text-xs text-accent/70 hover:text-accent flex items-center gap-1.5 transition-colors disabled:opacity-50"
+        className="
+          mt-1.5 text-xs font-medium
+          text-text-muted hover:text-accent
+          flex items-center gap-1.5
+          transition-colors duration-150
+          disabled:opacity-40 disabled:cursor-not-allowed
+        "
       >
-        {uploading ? '⏳ Uploading…' : `📎 ${label}`}
+        {uploading
+          ? <><span className="animate-spin">⏳</span> Uploading…</>
+          : <>📎 {label}</>
+        }
       </button>
+
       {imageUrl && (
         <div className="mt-2 relative w-fit">
-          <img src={imageUrl} alt="" className="max-h-28 rounded-lg border border-black/10 object-contain" />
+          <img
+            src={imageUrl}
+            alt=""
+            className="max-h-28 rounded-xl border border-border object-contain shadow-sm"
+          />
           <button
             type="button"
             onClick={onRemove}
-            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center shadow"
+            className="
+              absolute -top-1.5 -right-1.5
+              w-5 h-5 rounded-full
+              bg-danger text-white
+              text-xs flex items-center justify-center
+              shadow-md hover:scale-110 transition-transform
+            "
           >
             ×
           </button>
@@ -94,11 +137,11 @@ function ImageAttach({ label, imageUrl, uploading, onUpload, onRemove, folder })
   );
 }
 
-// ─── ImageSizePicker ──────────────────────────────────────────────────────────
+// ─── ImageSizePicker ───────────────────────────────────────────────────────────
 function ImageSizePicker({ value = 'medium', onChange }) {
   return (
-    <div className="mt-3 p-3 bg-black/2 border border-black/8 rounded-xl">
-      <p className="text-[11px] font-semibold text-text-dark/50 uppercase tracking-wide mb-2">
+    <div className="mt-3 p-3 bg-blue-soft-bg border border-border rounded-xl">
+      <p className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-2.5">
         Image display size for students
       </p>
       <div className="grid grid-cols-4 gap-1.5">
@@ -109,16 +152,26 @@ function ImageSizePicker({ value = 'medium', onChange }) {
               key={size.key}
               type="button"
               onClick={() => onChange(size.key)}
-              className={`flex flex-col items-center gap-1.5 rounded-lg border-2 py-2 px-1 transition-all
-                ${active ? 'border-primary bg-primary/5' : 'border-black/10 bg-white hover:border-black/20'}`}
+              className={`
+                flex flex-col items-center gap-1.5 rounded-xl border-2 py-2 px-1
+                transition-all duration-150
+                ${active
+                  ? 'border-primary bg-primary/8 shadow-sm'
+                  : 'border-border bg-surface hover:border-border-strong hover:bg-background'
+                }
+              `}
             >
-              <div className="w-full flex items-end justify-center bg-black/5 rounded h-10 px-2 pb-1">
-                <div className={`w-full rounded-sm ${size.barH} ${active ? 'bg-primary/50' : 'bg-black/20'}`} />
+              <div className="w-full flex items-end justify-center bg-black/5 rounded-lg h-10 px-2 pb-1">
+                <div className={`
+                  w-full rounded-sm transition-colors
+                  ${size.barH}
+                  ${active ? 'bg-primary/50' : 'bg-text-faint/40'}
+                `} />
               </div>
-              <span className={`text-[10px] font-bold leading-none ${active ? 'text-primary' : 'text-text-dark/50'}`}>
+              <span className={`text-[10px] font-bold leading-none ${active ? 'text-primary' : 'text-text-muted'}`}>
                 {size.label}
               </span>
-              <span className="text-[9px] text-text-dark/30 leading-none text-center">
+              <span className="text-[9px] text-text-faint leading-none text-center">
                 {size.hint}
               </span>
             </button>
@@ -129,37 +182,36 @@ function ImageSizePicker({ value = 'medium', onChange }) {
   );
 }
 
-// ─── QuestionForm ─────────────────────────────────────────────────────────────
+// ─── QuestionForm ──────────────────────────────────────────────────────────────
 function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
   const [q, setQ] = useState(() => initial ? { ...initial } : blankQ());
   const [imgErr, setImgErr] = useState('');
-  const [showExplanation, setShowExplanation] = useState(
+  const [showExplanation, setShowExp] = useState(
     !!(initial?.explanation || initial?.explanationImageUrl)
   );
   const questionRef = useRef(null);
 
   const set = (key, val) => setQ(p => ({ ...p, [key]: val }));
   const setOpt = (k, v) => setQ(p => ({ ...p, options: { ...p.options, [k]: v } }));
+
   const allOptsValid = OPTIONS.every(k => q.options[k]?.trim());
   const isValid = (q.text.trim() || q.imageUrl) && allOptsValid;
 
   const resizeTextarea = (el) => {
     if (!el) return;
-    const styles = window.getComputedStyle(el);
-    const lineHeight = parseFloat(styles.lineHeight) || 24;
-    const padding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
-    const border = parseFloat(styles.borderTopWidth) + parseFloat(styles.borderBottomWidth);
-    const minHeight = lineHeight * 3 + padding + border;
-    const maxHeight = lineHeight * 8 + padding + border;
+    const s = window.getComputedStyle(el);
+    const lh = parseFloat(s.lineHeight) || 24;
+    const pad = parseFloat(s.paddingTop) + parseFloat(s.paddingBottom);
+    const brd = parseFloat(s.borderTopWidth) + parseFloat(s.borderBottomWidth);
+    const minH = lh * 3 + pad + brd;
+    const maxH = lh * 8 + pad + brd;
     el.style.height = '0px';
-    const newHeight = Math.min(Math.max(el.scrollHeight, minHeight), maxHeight);
-    el.style.height = `${newHeight}px`;
-    el.style.overflowY = el.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    const next = Math.min(Math.max(el.scrollHeight, minH), maxH);
+    el.style.height = `${next}px`;
+    el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden';
   };
 
-  useEffect(() => {
-    resizeTextarea(questionRef.current);
-  }, [q.text]);
+  useEffect(() => { resizeTextarea(questionRef.current); }, [q.text]);
 
   async function handleImgUpload(file, folder, urlKey, loadingKey) {
     setImgErr('');
@@ -174,20 +226,32 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
   }
 
   return (
-    <div className="border border-accent/25 rounded-xl p-4 bg-accent/3 space-y-4 mt-2">
-
+    <div className="
+      border border-accent/20 rounded-2xl p-5
+      bg-gradient-to-b from-accent/3 to-transparent
+      space-y-5 mt-2 shadow-sm
+    ">
+      {/* Upload error */}
       {imgErr && (
-        <p className="text-xs text-red-500 bg-red-50 px-3 py-2 rounded-lg">{imgErr}</p>
+        <p className="text-xs text-danger bg-danger-bg border border-danger/20 px-3 py-2 rounded-lg">
+          ⚠️ {imgErr}
+        </p>
       )}
 
-      {/* Question text */}
+      {/* ── Question text ── */}
       <fieldset className="space-y-2">
-        <legend className="text-xs font-semibold text-text-dark/50 uppercase tracking-wide">
+        <legend className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-1">
           Question
         </legend>
         <textarea
           ref={questionRef}
-          className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm leading-6 outline-none focus:border-accent resize-none bg-white"
+          className="
+            w-full border border-border rounded-xl px-3 py-2.5
+            text-sm leading-6 text-text-dark
+            outline-none focus:border-accent focus:ring-2 focus:ring-accent/10
+            resize-none bg-surface transition-all duration-150
+            placeholder:text-text-faint
+          "
           placeholder="Enter question text — leave blank if image only"
           value={q.text}
           onChange={e => { set('text', e.target.value); resizeTextarea(e.target); }}
@@ -206,10 +270,13 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
         )}
       </fieldset>
 
-      {/* Options */}
+      {/* ── Options ── */}
       <fieldset className="space-y-2">
-        <legend className="text-xs font-semibold text-text-dark/50 uppercase tracking-wide">
-          Options <span className="normal-case font-normal text-text-dark/30">— click letter to mark correct</span>
+        <legend className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-1">
+          Options{' '}
+          <span className="normal-case font-normal text-text-faint/70">
+            — click letter to mark correct
+          </span>
         </legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {OPTIONS.map(opt => {
@@ -217,19 +284,36 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
             return (
               <div
                 key={opt}
-                className={`flex items-center gap-2.5 border rounded-lg px-3 py-2 transition-colors
-                  ${isCorrect ? 'border-answered bg-answered/5' : 'border-black/10 bg-white'}`}
+                className={`
+                  flex items-center gap-2.5 border rounded-xl px-3 py-2
+                  transition-all duration-150
+                  ${isCorrect
+                    ? 'border-success/40 bg-success-bg shadow-sm'
+                    : 'border-border bg-surface hover:border-accent/30 hover:bg-background'
+                  }
+                `}
               >
                 <button
                   type="button"
                   onClick={() => set('correctAnswer', opt)}
-                  className={`w-6 h-6 rounded-full border-2 flex-shrink-0 flex items-center justify-center text-[11px] font-bold transition-colors
-                    ${isCorrect ? 'border-answered bg-answered text-white' : 'border-black/20 text-text-dark/40 hover:border-accent'}`}
+                  className={`
+                    w-6 h-6 rounded-full border-2 flex-shrink-0
+                    flex items-center justify-center
+                    text-[11px] font-bold transition-all duration-150
+                    ${isCorrect
+                      ? 'border-success bg-success text-white shadow-sm'
+                      : 'border-border bg-surface text-text-muted hover:border-accent hover:text-accent'
+                    }
+                  `}
                 >
                   {opt}
                 </button>
                 <input
-                  className="flex-1 text-sm outline-none bg-transparent min-w-0"
+                  className={`
+                    flex-1 text-sm outline-none bg-transparent min-w-0
+                    ${isCorrect ? 'text-success font-medium' : 'text-text-dark'}
+                    placeholder:text-text-faint
+                  `}
                   placeholder={`Option ${opt}`}
                   value={q.options[opt] || ''}
                   onChange={e => setOpt(opt, e.target.value)}
@@ -240,46 +324,67 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
         </div>
       </fieldset>
 
-      {/* Marks + Tags */}
+      {/* ── Marks + Tags ── */}
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-semibold text-text-dark/50 uppercase tracking-wide mb-1.5 block">
-            Marks
-            <span className="normal-case font-normal text-text-dark/30 ml-1">
+          <label className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-1.5 block">
+            Marks{' '}
+            <span className="normal-case font-normal text-text-faint/70 ml-1">
               default {sectionDefaultMarks || 1}
             </span>
           </label>
           <input
             type="number" min="0" step="0.5"
-            className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent bg-white"
+            className="
+              w-full border border-border rounded-xl px-3 py-2
+              text-sm text-text-dark outline-none
+              focus:border-accent focus:ring-2 focus:ring-accent/10
+              bg-surface transition-all duration-150
+              placeholder:text-text-faint
+            "
             placeholder={String(sectionDefaultMarks || 1)}
             value={q.marks}
             onChange={e => set('marks', e.target.value)}
           />
         </div>
         <div>
-          <label className="text-xs font-semibold text-text-dark/50 uppercase tracking-wide mb-1.5 block">
-            Tags <span className="normal-case font-normal text-text-dark/30">optional</span>
+          <label className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-1.5 block">
+            Tags{' '}
+            <span className="normal-case font-normal text-text-faint/70">optional</span>
           </label>
-          <TagInput tags={q.tags} onChange={tags => set('tags', tags)} placeholder="Chapter…" />
+          <TagInput
+            tags={q.tags}
+            onChange={tags => set('tags', tags)}
+            placeholder="Chapter…"
+          />
         </div>
       </div>
 
-      {/* Explanation */}
-      <div>
+      {/* ── Explanation ── */}
+      <div className="border-t border-border pt-4">
         <button
           type="button"
-          onClick={() => setShowExplanation(p => !p)}
-          className="text-xs font-semibold text-text-dark/40 hover:text-accent flex items-center gap-1.5 transition-colors"
+          onClick={() => setShowExp(p => !p)}
+          className="
+            text-xs font-semibold text-text-muted hover:text-accent
+            flex items-center gap-1.5 transition-colors duration-150
+          "
         >
-          <span>{showExplanation ? '▾' : '▸'}</span>
+          <span className="text-[10px]">{showExplanation ? '▾' : '▸'}</span>
           {showExplanation ? 'Hide explanation' : 'Add explanation (optional)'}
         </button>
+
         {showExplanation && (
-          <div className="mt-2 space-y-2">
+          <div className="mt-3 space-y-2 pl-4 border-l-2 border-accent/20">
             <textarea
               rows={2}
-              className="w-full border border-black/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-accent resize-none bg-white"
+              className="
+                w-full border border-border rounded-xl px-3 py-2.5
+                text-sm text-text-dark outline-none
+                focus:border-accent focus:ring-2 focus:ring-accent/10
+                resize-none bg-surface transition-all duration-150
+                placeholder:text-text-faint
+              "
               placeholder="Why is this the correct answer?"
               value={q.explanation}
               onChange={e => set('explanation', e.target.value)}
@@ -289,33 +394,49 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
               imageUrl={q.explanationImageUrl}
               uploading={q.explanationUploading}
               folder="explanations"
-              onUpload={(f, folder) => handleImgUpload(f, folder, 'explanationImageUrl', 'explanationUploading')}
+              onUpload={(f, folder) =>
+                handleImgUpload(f, folder, 'explanationImageUrl', 'explanationUploading')
+              }
               onRemove={() => set('explanationImageUrl', '')}
             />
           </div>
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-black/6">
+      {/* ── Actions ── */}
+      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
         <button
           type="button"
           disabled={!isValid}
           onClick={() => isValid && onSave(q)}
-          className="text-sm bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="
+            text-sm font-medium
+            bg-primary hover:bg-primary-hover
+            text-white px-5 py-2 rounded-xl
+            transition-all duration-150 shadow-sm
+            disabled:opacity-40 disabled:cursor-not-allowed
+            hover:shadow-md active:scale-[0.98]
+          "
         >
           {initial ? 'Update Question' : 'Save Question'}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="text-sm text-text-dark/50 hover:text-text-dark px-3 py-1.5 transition-colors"
+          className="
+            text-sm text-text-muted hover:text-text-dark
+            px-3 py-2 rounded-xl
+            hover:bg-background transition-all duration-150
+          "
         >
           Cancel
         </button>
         {!isValid && (
-          <span className="text-[11px] text-red-400">
-            {!(q.text.trim() || q.imageUrl) ? 'Add text or image' : 'Fill all 4 options'}
+          <span className="text-[11px] text-danger bg-danger-bg px-2 py-1 rounded-lg">
+            {!(q.text.trim() || q.imageUrl)
+              ? '⚠️ Add text or image'
+              : '⚠️ Fill all 4 options'
+            }
           </span>
         )}
       </div>
@@ -323,7 +444,7 @@ function QuestionForm({ sectionDefaultMarks, initial, onSave, onCancel }) {
   );
 }
 
-// ─── GoogleFormPanel ──────────────────────────────────────────────────────────
+// ─── GoogleFormPanel ───────────────────────────────────────────────────────────
 function mapGFormJSON(data) {
   const mcq = data.questions.filter(q =>
     q.type !== 'open-ended' &&
@@ -339,7 +460,8 @@ function mapGFormJSON(data) {
       .filter(q => q.sectionId === s.id)
       .map((q, idx) => ({
         id: uid(),
-        text: q.text || '',
+        googleFormItemId: q.googleFormItemId || '',
+        text: normalizeNewlines(q.text),
         imageUrl: q.image?.url || '',
         imageSize: (q.text?.trim().replace(/^\d+\.?\s*$/, '')) ? 'medium' : 'full',
         imageUploading: false,
@@ -359,23 +481,215 @@ function mapGFormJSON(data) {
   return {
     sections,
     title: data.title || '',
-    duration: data.duration || 60,
+    googleForm: data.googleForm || null,
     totalQ: sections.reduce((a, s) => a + s.questions.length, 0),
   };
 }
 
+// ─── GoogleFormPanel shell ─────────────────────────────────────────────────────
 function GoogleFormPanel({ onImport, hasExistingQuestions }) {
+  const [mode, setMode] = useState('url');
+
+  return (
+    <div className="space-y-4 mt-2">
+      {/* Header */}
+      <div className="flex items-start gap-3 bg-indigo-bg border border-indigo/20 rounded-2xl p-4">
+        <div className="
+          w-9 h-9 rounded-xl flex-shrink-0
+          bg-gradient-to-br from-indigo to-primary
+          text-white flex items-center justify-center
+          font-bold text-sm shadow-sm
+        ">
+          G
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-text-dark">Import from Google Form</p>
+          <p className="text-xs text-text-muted mt-0.5">
+            Extract questions, images, answers and feedback automatically
+          </p>
+        </div>
+      </div>
+
+      {/* Mode toggle */}
+      <div className="flex gap-0 border border-border rounded-lg p-0.5 bg-background w-fit">
+        {[['url', '🔗 Form URL'], ['json', '📋 Paste JSON']].map(([k, label]) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setMode(k)}
+            className={`
+              text-xs px-4 py-1.5 rounded-[7px] font-medium
+              transition-all duration-150 whitespace-nowrap
+              ${mode === k
+                ? 'bg-surface text-text-dark shadow-sm'
+                : 'text-text-muted hover:text-text-dark'
+              }
+            `}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'url'
+        ? <UrlExtractor onImport={onImport} hasExistingQuestions={hasExistingQuestions} />
+        : <JsonPaster onImport={onImport} hasExistingQuestions={hasExistingQuestions} />
+      }
+    </div>
+  );
+}
+
+// ─── URL Extractor ─────────────────────────────────────────────────────────────
+function UrlExtractor({ onImport, hasExistingQuestions }) {
+  const [formUrl, setFormUrl] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState('');
+  const [preview, setPreview] = useState(null);
+  const [error, setError] = useState('');
+  const [errorDetail, setErrorDetail] = useState('');
+
+  async function handleExtract() {
+    if (!formUrl.trim()) return;
+    setLoading(true);
+    setError('');
+    setErrorDetail('');
+    setPreview(null);
+
+    setProgress('Connecting to Google Form...');
+    const t1 = setTimeout(() => setProgress('Extracting questions...'), 3000);
+    const t2 = setTimeout(() => setProgress('Uploading images to Cloudinary...'), 8000);
+    const t3 = setTimeout(() => setProgress('Building question map...'), 20000);
+    const t4 = setTimeout(() => setProgress('Almost done...'), 40000);
+
+    try {
+      const { extractFromGoogleForm } = await import('../../../services/googleForm.service');
+      const data = await extractFromGoogleForm(formUrl.trim());
+      [t1, t2, t3, t4].forEach(clearTimeout);
+      const result = mapExtractedData(data);
+      setPreview(result);
+    } catch (e) {
+      [t1, t2, t3, t4].forEach(clearTimeout);
+      setError(e.message || 'Extraction failed');
+      setErrorDetail(e.stack || '');
+    } finally {
+      setLoading(false);
+      setProgress('');
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      {!preview && (
+        <>
+          {/* URL input */}
+          <div>
+            <label className="block text-xs font-medium text-text-muted mb-1.5">
+              Google Form URL or Form ID
+            </label>
+            <input
+              className="
+                w-full border border-border rounded-xl px-3 py-2.5
+                text-sm text-text-dark outline-none
+                focus:border-accent focus:ring-2 focus:ring-accent/10
+                bg-surface transition-all duration-150
+                placeholder:text-text-faint
+                disabled:opacity-50
+              "
+              placeholder="https://docs.google.com/forms/d/1ABC.../edit  or  1ABC..."
+              value={formUrl}
+              onChange={e => setFormUrl(e.target.value)}
+              disabled={loading}
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="
+              text-xs text-danger bg-danger-bg
+              border border-danger/20 rounded-xl px-3 py-2.5 space-y-1
+            ">
+              <p className="font-semibold">⚠️ {error}</p>
+              {errorDetail && (
+                <details className="mt-1">
+                  <summary className="text-danger/60 cursor-pointer hover:text-danger">
+                    Show details
+                  </summary>
+                  <pre className="
+                    mt-1 text-[10px] text-danger/50
+                    whitespace-pre-wrap break-all
+                    max-h-32 overflow-y-auto
+                  ">
+                    {errorDetail}
+                  </pre>
+                </details>
+              )}
+            </div>
+          )}
+
+          {/* Progress */}
+          {loading && (
+            <div className="bg-sky-bg border border-sky/20 rounded-2xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="
+                  w-4 h-4 rounded-full flex-shrink-0
+                  border-2 border-sky/30 border-t-sky
+                  animate-spin
+                " />
+                <p className="text-sm text-sky font-medium">{progress}</p>
+              </div>
+              <div className="w-full bg-sky/15 rounded-full h-1.5 overflow-hidden">
+                <div className="h-full bg-sky rounded-full animate-pulse" style={{ width: '60%' }} />
+              </div>
+              <p className="text-[11px] text-sky/60 mt-2">
+                This takes 30–60 seconds for exams with images
+              </p>
+            </div>
+          )}
+
+          {/* Extract button */}
+          <button
+            type="button"
+            onClick={handleExtract}
+            disabled={!formUrl.trim() || loading}
+            className="
+              text-sm font-medium
+              bg-primary hover:bg-primary-hover
+              text-white px-5 py-2.5 rounded-xl
+              transition-all duration-150 shadow-sm
+              disabled:opacity-40 disabled:cursor-not-allowed
+              hover:shadow-md active:scale-[0.98]
+            "
+          >
+            {loading ? 'Extracting…' : 'Extract & Preview →'}
+          </button>
+        </>
+      )}
+
+      {preview && (
+        <ImportPreview
+          preview={preview}
+          hasExistingQuestions={hasExistingQuestions}
+          onImport={onImport}
+          onReset={() => { setPreview(null); setFormUrl(''); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── JSON Paster ───────────────────────────────────────────────────────────────
+function JsonPaster({ onImport, hasExistingQuestions }) {
   const [json, setJson] = useState('');
   const [preview, setPreview] = useState(null);
   const [error, setError] = useState('');
 
   function handleParse() {
-    setError(''); setPreview(null);
+    setError('');
+    setPreview(null);
     try {
       const data = JSON.parse(json.trim());
-      if (!data.questions || !Array.isArray(data.questions)) {
+      if (!data.questions || !Array.isArray(data.questions))
         throw new Error('No "questions" array found in JSON.');
-      }
       const result = mapGFormJSON(data);
       if (result.totalQ === 0) throw new Error('No valid MCQ questions found.');
       setPreview(result);
@@ -385,115 +699,260 @@ function GoogleFormPanel({ onImport, hasExistingQuestions }) {
   }
 
   return (
-    <div className="space-y-4 mt-2">
-      <div className="flex items-start gap-3 bg-violet-50 border border-violet-200 rounded-xl p-4">
-        <div className="w-8 h-8 bg-violet-600 text-white rounded-lg flex items-center justify-center font-bold text-sm flex-shrink-0">G</div>
-        <div>
-          <p className="text-sm font-medium text-text-dark">Import from Google Form</p>
-          <p className="text-xs text-text-dark/50 mt-0.5">
-            Run <span className="font-mono bg-black/5 px-1 rounded">extractFormToExamJSON()</span> in Apps Script → copy the JSON → paste below
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-3">
       {!preview && (
-        <div className="space-y-2">
-          <label className="block text-xs font-medium text-text-dark/60">Paste JSON output</label>
-          <textarea
-            rows={10}
-            className="w-full border border-black/10 rounded-xl px-3 py-2.5 text-xs font-mono outline-none focus:border-accent resize-y bg-white placeholder:text-text-dark/20"
-            placeholder={'{\n  "title": "Grade 5 Fractions Test",\n  "sections": [...],\n  "questions": [...]\n}'}
-            value={json}
-            onChange={e => setJson(e.target.value)}
-          />
+        <>
+          <div>
+            <label className="block text-xs font-medium text-text-muted mb-1.5">
+              Paste JSON output from{' '}
+              <span className="font-mono text-[11px] bg-background border border-border px-1.5 py-0.5 rounded-md text-text-dark">
+                extractFormToExamJSON()
+              </span>
+            </label>
+            <textarea
+              rows={10}
+              className="
+                w-full border border-border rounded-xl px-3 py-2.5
+                text-xs font-mono text-text-dark
+                outline-none focus:border-accent focus:ring-2 focus:ring-accent/10
+                resize-y bg-surface transition-all duration-150
+                placeholder:text-text-faint
+              "
+              placeholder={'{\n  "title": "Grade 5 Fractions Test",\n  "sections": [...],\n  "questions": [...]\n}'}
+              value={json}
+              onChange={e => setJson(e.target.value)}
+            />
+          </div>
+
           {error && (
-            <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">⚠️ {error}</div>
+            <div className="
+              text-xs text-danger bg-danger-bg
+              border border-danger/20 rounded-xl px-3 py-2.5
+            ">
+              ⚠️ {error}
+            </div>
           )}
+
           <button
             type="button"
             onClick={handleParse}
             disabled={!json.trim()}
-            className="text-sm bg-primary text-white px-5 py-2 rounded-lg hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="
+              text-sm font-medium
+              bg-primary hover:bg-primary-hover
+              text-white px-5 py-2 rounded-xl
+              transition-all duration-150 shadow-sm
+              disabled:opacity-40 disabled:cursor-not-allowed
+              hover:shadow-md active:scale-[0.98]
+            "
           >
             Parse & Preview →
           </button>
-        </div>
+        </>
       )}
 
       {preview && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-xl px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-green-800">{preview.title}</p>
-              <p className="text-xs text-green-600 mt-0.5">
-                {preview.totalQ} questions · {preview.sections.length} section{preview.sections.length !== 1 ? 's' : ''} · {preview.duration} min
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => { setPreview(null); setJson(''); setError(''); }}
-              className="text-xs text-green-700/50 hover:text-green-800 transition-colors"
-            >
-              ← Re-paste
-            </button>
-          </div>
-
-          {hasExistingQuestions && (
-            <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-              ⚠️ This will replace your existing questions.
-            </div>
-          )}
-
-          <div className="border border-black/8 rounded-xl overflow-hidden">
-            {preview.sections.map(s => (
-              <div key={s.id}>
-                <div className="bg-black/3 px-4 py-2 flex items-center justify-between border-b border-black/6">
-                  <span className="text-xs font-semibold text-text-dark/55 uppercase tracking-wide">{s.name}</span>
-                  <span className="text-xs text-text-dark/35">{s.questions.length} Q · {s.defaultMarks} mark each</span>
-                </div>
-                <div className="divide-y divide-black/5">
-                  {s.questions.map((q, qi) => (
-                    <div key={q.id} className="flex items-start gap-3 px-4 py-2.5">
-                      <span className="text-[11px] font-semibold text-text-dark/20 w-5 pt-px flex-shrink-0">{qi + 1}</span>
-                      {q.imageUrl && (
-                        <img src={q.imageUrl} alt="" className="h-12 w-16 object-cover rounded-lg border border-black/8 flex-shrink-0" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-dark line-clamp-2">
-                          {q.text || <span className="text-text-dark/30 italic">Image-only question</span>}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
-                          <span className="text-[11px] text-text-dark/30">A · B · C · D</span>
-                          <span className="text-[11px] font-semibold text-answered">✓ {q.correctAnswer}</span>
-                          {(q.explanation || q.explanationImageUrl) && (
-                            <span className="text-[11px] text-accent/60 bg-accent/8 px-1.5 py-0.5 rounded-full">has solution</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              type="button"
-              onClick={() => onImport(preview)}
-              className="text-sm bg-primary text-white px-5 py-2 rounded-lg hover:bg-accent transition-colors font-medium"
-            >
-              Import {preview.totalQ} Questions →
-            </button>
-            <p className="text-xs text-text-dark/35">You can edit any question after import</p>
-          </div>
-        </div>
+        <ImportPreview
+          preview={preview}
+          hasExistingQuestions={hasExistingQuestions}
+          onImport={onImport}
+          onReset={() => { setPreview(null); setJson(''); setError(''); }}
+        />
       )}
     </div>
   );
 }
 
-// ─── SectionsStep ─────────────────────────────────────────────────────────────
+// ─── ImportPreview ─────────────────────────────────────────────────────────────
+function ImportPreview({ preview, hasExistingQuestions, onImport, onReset }) {
+  return (
+    <div className="space-y-3">
+      {/* Success header */}
+      <div className="
+        flex items-center justify-between
+        bg-success-bg border border-success/25 rounded-2xl px-4 py-3
+      ">
+        <div>
+          <p className="text-sm font-semibold text-success">{preview.title}</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            {preview.googleForm?.linked && (
+              <span className="
+                text-[10px] font-semibold
+                bg-emerald-bg text-emerald
+                px-2 py-0.5 rounded-full border border-emerald/20
+              ">
+                ✅ Google Form linked
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onReset}
+          className="text-xs text-success/50 hover:text-success transition-colors font-medium"
+        >
+          ← Re-enter
+        </button>
+      </div>
+
+      {/* Warning */}
+      {hasExistingQuestions && (
+        <div className="
+          text-xs text-warning bg-warning-bg
+          border border-warning/25 rounded-xl px-3 py-2.5
+          flex items-start gap-2
+        ">
+          <span className="flex-shrink-0">⚠️</span>
+          <span>This will replace your existing questions.</span>
+        </div>
+      )}
+
+      {/* Question list */}
+      <div className="border border-border rounded-2xl overflow-hidden">
+        {preview.sections.map(s => (
+          <div key={s.id}>
+            {/* Section header */}
+            <div className="
+              bg-background px-4 py-2.5
+              flex items-center justify-between
+              border-b border-border
+            ">
+              <span className="text-[11px] font-semibold text-text-muted uppercase tracking-widest">
+                {s.name}
+              </span>
+              <span className="
+                text-[11px] text-text-faint
+                bg-surface border border-border
+                px-2 py-0.5 rounded-full
+              ">
+                {s.questions.length} Q · {s.defaultMarks} mark each
+              </span>
+            </div>
+
+            {/* Questions */}
+            <div className="divide-y divide-border/50">
+              {s.questions.map((q, qi) => (
+                <div key={q.id} className="flex items-start gap-3 px-4 py-3 hover:bg-background transition-colors">
+                  <span className="
+                    text-[11px] font-bold text-text-faint
+                    w-5 pt-px flex-shrink-0
+                  ">
+                    {qi + 1}
+                  </span>
+                  {q.imageUrl && (
+                    <img
+                      src={q.imageUrl}
+                      alt=""
+                      className="h-12 w-16 object-cover rounded-lg border border-border flex-shrink-0"
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-text-dark line-clamp-2">
+                      {q.text || (
+                        <span className="text-text-faint italic">Image-only question</span>
+                      )}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                      <span className="text-[11px] text-text-faint">A · B · C · D</span>
+                      <span className="
+                        text-[11px] font-bold text-success
+                        bg-success-bg px-1.5 py-0.5 rounded-full
+                      ">
+                        ✓ {q.correctAnswer}
+                      </span>
+                      {q.googleFormItemId && (
+                        <span className="
+                          text-[10px] font-medium text-indigo
+                          bg-indigo-bg border border-indigo/15
+                          px-1.5 py-0.5 rounded-full
+                        ">
+                          GForm linked
+                        </span>
+                      )}
+                      {(q.explanation || q.explanationImageUrl) && (
+                        <span className="
+                          text-[10px] font-medium text-accent
+                          bg-accent/8 border border-accent/15
+                          px-1.5 py-0.5 rounded-full
+                        ">
+                          has solution
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Import CTA */}
+      <div className="flex items-center gap-3 pt-1">
+        <button
+          type="button"
+          onClick={() => onImport(preview)}
+          className="
+            text-sm font-semibold
+            bg-primary hover:bg-primary-hover
+            text-white px-5 py-2.5 rounded-xl
+            transition-all duration-150 shadow-sm
+            hover:shadow-md active:scale-[0.98]
+          "
+        >
+          Import {preview.totalQ} Questions →
+        </button>
+        <p className="text-xs text-text-faint">You can edit any question after import</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── mapExtractedData ──────────────────────────────────────────────────────────
+function mapExtractedData(data) {
+  const mcq = data.questions.filter(q =>
+    q.type !== 'open-ended' &&
+    q.options &&
+    Object.keys(q.options).length >= 2 &&
+    q.correctAnswer
+  );
+  const sections = (data.sections || []).map(s => ({
+    id: s.id,
+    name: s.label || s.name || 'Section',
+    defaultMarks: s.marks || 1,
+    questions: mcq
+      .filter(q => q.sectionId === s.id)
+      .map((q, idx) => ({
+        id: uid(),
+        googleFormItemId: q.googleFormItemId || '',
+        text: normalizeNewlines(q.text),
+        imageUrl: q.image?.url || '',
+        imageSize: (q.text?.trim().replace(/^\d+\.?\s*$/, '')) ? 'medium' : 'full',
+        imageUploading: false,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        marks: q.marks || s.marks || 1,
+        explanation: q.feedback?.incorrect || q.feedback?.correct || '',
+        explanationImageUrl:
+          q.feedback?.incorrectLinks?.find(l => l.isImage)?.url ||
+          q.feedback?.correctLinks?.find(l => l.isImage)?.url || '',
+        explanationUploading: false,
+        tags: [],
+        order: idx,
+        isNameField: q.isNameField || false,
+        isEmailField: q.isEmailField || false,
+      })),
+  })).filter(s => s.questions.length > 0);
+
+  return {
+    sections,
+    title: data.title || '',
+    googleForm: data.googleForm || null,
+    totalQ: sections.reduce((a, s) => a + s.questions.length, 0),
+  };
+}
+
+// ─── SectionsStep (default export) ────────────────────────────────────────────
 export default function SectionsStep({ sections, setSections, onGFormImport }) {
   const [activeSectionId, setActiveSectionId] = useState(sections[0]?.id);
   const [importTab, setImportTab] = useState('manual');
@@ -504,10 +963,15 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
   const totalExistingQ = sections.reduce((a, s) => a + s.questions.length, 0);
 
   const closeForm = () => { setShowForm(false); setEditingQ(null); };
-  const switchSection = (id) => { setActiveSectionId(id); closeForm(); };
+  const switchSection = id => { setActiveSectionId(id); closeForm(); };
 
   const addSection = () => {
-    const s = { id: uid(), name: `Section ${sections.length + 1}`, defaultMarks: 1, questions: [] };
+    const s = {
+      id: uid(),
+      name: `Section ${sections.length + 1}`,
+      defaultMarks: 1,
+      questions: [],
+    };
     setSections(p => [...p, s]);
     setActiveSectionId(s.id);
     closeForm();
@@ -554,20 +1018,17 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
     setEditingQ(q);
     setShowForm(true);
     setTimeout(() => {
-      document.getElementById('question-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('question-form')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 50);
   };
 
   const handleGFormImport = (parsed) => {
-
-    // ✅ Debug
-    parsed.sections.forEach(s => {
-      s.questions.forEach(q => {
-        console.log(q.text?.slice(0, 20) || '[img only]', '→', q.imageSize);
-      });
-    });
-
-
+    parsed.sections.forEach(s =>
+      s.questions.forEach(q =>
+        console.log(q.text?.slice(0, 20) || '[img only]', '→', q.imageSize)
+      )
+    );
     setSections(parsed.sections);
     setActiveSectionId(parsed.sections[0]?.id);
     closeForm();
@@ -576,56 +1037,86 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-5">
+    <div className="flex flex-col md:flex-row gap-6">
 
-      {/* Section sidebar */}
+      {/* ── Section sidebar ── */}
       <div className="w-full md:w-48 flex-shrink-0">
-        <p className="text-[11px] font-medium text-text-dark/40 uppercase tracking-wide mb-2">Sections</p>
+        <p className="text-[11px] font-semibold text-text-faint uppercase tracking-widest mb-2.5">
+          Sections
+        </p>
         <div className="flex md:flex-col gap-2 overflow-x-auto pb-1 md:pb-0">
-          {sections.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => switchSection(s.id)}
-              className={`text-left px-3 py-2 rounded-lg text-sm transition-colors flex-shrink-0
-                ${s.id === activeSectionId
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-surface border border-black/8 text-text-dark hover:border-accent/30'}`}
-            >
-              <div className="font-medium truncate max-w-[120px] md:max-w-none">{s.name || 'Untitled'}</div>
-              <div className={`text-[11px] mt-0.5 ${s.id === activeSectionId ? 'text-white/55' : 'text-text-dark/35'}`}>
-                {s.questions.length} Q
-              </div>
-            </button>
-          ))}
+          {sections.map(s => {
+            const active = s.id === activeSectionId;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => switchSection(s.id)}
+                className={`
+                  text-left px-3 py-2.5 rounded-xl text-sm
+                  transition-all duration-150 flex-shrink-0
+                  ${active
+                    ? 'bg-primary text-white shadow-md shadow-primary/20'
+                    : 'bg-surface border border-border text-text-dark hover:border-accent/30 hover:bg-background'
+                  }
+                `}
+              >
+                <div className="font-semibold truncate max-w-[120px] md:max-w-none">
+                  {s.name || 'Untitled'}
+                </div>
+                <div className={`text-[11px] mt-0.5 ${active ? 'text-white/60' : 'text-text-faint'}`}>
+                  {s.questions.length} Q
+                </div>
+              </button>
+            );
+          })}
+
+          {/* Add section */}
           <button
             type="button"
             onClick={addSection}
-            className="text-left px-3 py-2 rounded-lg text-sm border border-dashed border-black/15 text-text-dark/40 hover:border-accent hover:text-accent transition-colors flex-shrink-0"
+            className="
+              text-left px-3 py-2.5 rounded-xl text-sm
+              border border-dashed border-border text-text-faint
+              hover:border-accent hover:text-accent hover:bg-accent/3
+              transition-all duration-150 flex-shrink-0
+            "
           >
             + Add
           </button>
         </div>
       </div>
 
-      {/* Active section editor */}
+      {/* ── Active section editor ── */}
       {activeSection && (
         <div className="flex-1 min-w-0">
 
-          {/* Section config */}
-          <div className="flex flex-wrap items-center gap-3 mb-4">
+          {/* Section config bar */}
+          <div className="flex flex-wrap items-center gap-3 mb-5">
             <input
-              className={`border rounded-lg px-3 py-1.5 text-sm font-medium outline-none bg-white flex-1 min-w-[140px] max-w-xs
-                ${!activeSection.name.trim() ? 'border-red-300 focus:border-red-400' : 'border-black/10 focus:border-accent'}`}
+              className={`
+                border rounded-xl px-3 py-2 text-sm font-semibold
+                outline-none bg-surface flex-1 min-w-[140px] max-w-xs
+                transition-all duration-150
+                ${!activeSection.name.trim()
+                  ? 'border-danger/50 focus:border-danger focus:ring-2 focus:ring-danger/10'
+                  : 'border-border focus:border-accent focus:ring-2 focus:ring-accent/10'
+                }
+              `}
               value={activeSection.name}
               onChange={e => updateSection(activeSection.id, 'name', e.target.value)}
               placeholder="Section name"
             />
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-xs text-text-dark/50 whitespace-nowrap">Default marks</span>
+              <span className="text-xs text-text-muted whitespace-nowrap">Default marks</span>
               <input
                 type="number" min="0" step="0.5"
-                className="w-14 border border-black/10 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-accent text-center bg-white"
+                className="
+                  w-16 border border-border rounded-xl px-2 py-2
+                  text-sm text-text-dark outline-none text-center bg-surface
+                  focus:border-accent focus:ring-2 focus:ring-accent/10
+                  transition-all duration-150
+                "
                 value={activeSection.defaultMarks}
                 onChange={e => updateSection(activeSection.id, 'defaultMarks', e.target.value)}
               />
@@ -634,7 +1125,11 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
               <button
                 type="button"
                 onClick={() => deleteSection(activeSection.id)}
-                className="text-xs text-red-400 hover:text-red-600 transition-colors flex-shrink-0"
+                className="
+                  text-xs text-danger/60 hover:text-danger
+                  hover:bg-danger-bg px-2 py-1 rounded-lg
+                  transition-all duration-150 flex-shrink-0
+                "
               >
                 Delete section
               </button>
@@ -642,22 +1137,32 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
           </div>
 
           {/* Import tabs */}
-          <div className="flex gap-0 mb-4 border border-black/8 rounded-lg p-0.5 bg-black/3 w-fit">
+          <div className="flex gap-0 mb-5 border border-border rounded-lg p-0.5 bg-background w-fit">
             {[['manual', 'Manual Entry'], ['gform', 'Google Form']].map(([k, label]) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => { setImportTab(k); closeForm(); }}
-                className={`text-xs px-4 py-1.5 rounded-[7px] font-medium transition-colors whitespace-nowrap
-                  ${importTab === k ? 'bg-white text-text-dark shadow-sm' : 'text-text-dark/40 hover:text-text-dark'}`}
+                className={`
+                  text-xs px-4 py-1.5 rounded-[7px] font-medium
+                  transition-all duration-150 whitespace-nowrap
+                  ${importTab === k
+                    ? 'bg-surface text-text-dark shadow-sm'
+                    : 'text-text-muted hover:text-text-dark'
+                  }
+                `}
               >
                 {label}
               </button>
             ))}
           </div>
 
+          {/* ── Content ── */}
           {importTab === 'gform' ? (
-            <GoogleFormPanel onImport={handleGFormImport} hasExistingQuestions={totalExistingQ > 0} />
+            <GoogleFormPanel
+              onImport={handleGFormImport}
+              hasExistingQuestions={totalExistingQ > 0}
+            />
           ) : (
             <>
               {/* Question list */}
@@ -665,41 +1170,109 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
                 {activeSection.questions.map((q, i) => (
                   <div
                     key={q.id}
-                    className="flex items-start gap-3 border border-black/8 rounded-lg px-3 py-2.5 bg-surface hover:border-black/15 group transition-colors"
+                    className="
+                      flex items-start gap-3
+                      border border-border rounded-xl px-3 py-3
+                      bg-surface hover:border-border-strong hover:bg-background
+                      group transition-all duration-150
+                    "
                   >
-                    <span className="text-[11px] font-semibold text-text-dark/25 w-6 pt-0.5 flex-shrink-0">
+                    {/* Index */}
+                    <span className="
+                      text-[11px] font-bold text-text-faint
+                      w-6 pt-0.5 flex-shrink-0
+                    ">
                       Q{i + 1}
                     </span>
+
+                    {/* Body */}
                     <div className="flex-1 min-w-0">
                       {q.imageUrl && !q.text && (
-                        <img src={q.imageUrl} alt="" className="h-14 rounded mb-1 object-contain" />
+                        <img src={q.imageUrl} alt="" className="h-14 rounded-lg mb-1.5 object-contain" />
                       )}
-                      <p className="text-sm text-text-dark truncate">{q.text || '[Image question]'}</p>
-                      <p className="text-[11px] text-text-dark/40 mt-0.5">
-                        Correct: <span className="font-medium text-answered">{q.correctAnswer}</span>
-                        {' · '}{q.marks || activeSection.defaultMarks || 1} mark
+                      <p className="text-sm text-text-dark truncate font-medium">
+                        {q.text || '[Image question]'}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                        <span className="text-[11px] text-text-faint">A · B · C · D</span>
+                        <span className="
+                          text-[11px] font-bold text-success
+                          bg-success-bg px-1.5 py-0.5 rounded-full
+                        ">
+                          ✓ {q.correctAnswer}
+                        </span>
+                        <span className="
+                          text-[11px] text-text-faint
+                          bg-background border border-border
+                          px-1.5 py-0.5 rounded-full
+                        ">
+                          {q.marks || activeSection.defaultMarks || 1} mark
+                        </span>
                         {q.imageUrl && (
-                          <span className="ml-1.5 text-accent/60 bg-accent/8 px-1.5 py-0.5 rounded-full">
+                          <span className="
+                            text-[10px] font-medium text-accent
+                            bg-accent/8 border border-accent/15
+                            px-1.5 py-0.5 rounded-full
+                          ">
                             img · {q.imageSize || 'medium'}
                           </span>
                         )}
-                        {q.tags?.length > 0 && ` · ${q.tags.join(', ')}`}
-                      </p>
+                        {q.tags?.length > 0 && (
+                          <span className="
+                            text-[10px] font-medium text-indigo
+                            bg-indigo-bg border border-indigo/15
+                            px-1.5 py-0.5 rounded-full
+                          ">
+                            {q.tags.join(', ')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button type="button" onClick={() => handleEditQuestion(q)} className="text-xs text-accent hover:underline">Edit</button>
-                      <button type="button" onClick={() => deleteQuestion(q.id)} className="text-xs text-red-400 hover:underline">Del</button>
+
+                    {/* Actions */}
+                    <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleEditQuestion(q)}
+                        className="
+                          text-xs font-medium text-accent
+                          hover:bg-accent/8 px-2 py-1 rounded-lg
+                          transition-colors
+                        "
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => deleteQuestion(q.id)}
+                        className="
+                          text-xs font-medium text-danger/60
+                          hover:text-danger hover:bg-danger-bg
+                          px-2 py-1 rounded-lg transition-colors
+                        "
+                      >
+                        Del
+                      </button>
                     </div>
                   </div>
                 ))}
 
+                {/* Empty state */}
                 {activeSection.questions.length === 0 && !showForm && (
-                  <div className="border border-dashed border-black/10 rounded-xl py-10 text-center">
-                    <p className="text-sm text-text-dark/30">No questions in this section yet</p>
+                  <div className="
+                    border-2 border-dashed border-border rounded-2xl py-12 text-center
+                    bg-background
+                  ">
+                    <p className="text-2xl mb-2">📝</p>
+                    <p className="text-sm font-medium text-text-muted">No questions yet</p>
+                    <p className="text-xs text-text-faint mt-1">
+                      Add your first question below
+                    </p>
                   </div>
                 )}
               </div>
 
+              {/* Question form / Add button */}
               {showForm ? (
                 <div id="question-form">
                   <QuestionForm
@@ -714,7 +1287,14 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
                 <button
                   type="button"
                   onClick={() => { setEditingQ(null); setShowForm(true); }}
-                  className="text-sm border border-dashed border-accent/35 text-accent px-4 py-2.5 rounded-lg hover:bg-accent/5 transition-colors w-full"
+                  className="
+                    text-sm font-medium
+                    border-2 border-dashed border-accent/30 text-accent
+                    px-4 py-3 rounded-xl w-full
+                    hover:bg-accent/5 hover:border-accent/50
+                    transition-all duration-150
+                    flex items-center justify-center gap-2
+                  "
                 >
                   + Add Question
                 </button>

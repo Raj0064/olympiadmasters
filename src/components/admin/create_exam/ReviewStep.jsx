@@ -1,9 +1,13 @@
-export default function ReviewStep({ exam, sections, batchName }) {
-  const duration = parseInt(exam.duration) === 0 || !exam.duration ? 'Unlimited' : `${exam.duration} min`;
+export default function ReviewStep({ exam, sections, batchName, isEditMode }) {
+  const duration = parseInt(exam.duration) === 0 || !exam.duration
+    ? 'Unlimited'
+    : `${exam.duration} min`;
+
   const totalQ = sections.reduce((a, s) => a + s.questions.length, 0);
   const totalMarks = parseFloat(
     sections.reduce((a, s) =>
-      a + s.questions.reduce((qa, q) => qa + parseFloat(q.marks || s.defaultMarks || 1), 0), 0
+      a + s.questions.reduce((qa, q) =>
+        qa + parseFloat(q.marks || s.defaultMarks || 1), 0), 0
     ).toFixed(2)
   );
   const emptySections = sections.filter(s => s.questions.length === 0);
@@ -11,9 +15,21 @@ export default function ReviewStep({ exam, sections, batchName }) {
   return (
     <div className="space-y-5 max-w-lg">
 
+      {/* Edit mode banner */}
+      {isEditMode && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-blue-500">✏️</span>
+          <p className="text-xs text-blue-700 font-medium">
+            Editing existing exam — review changes before saving
+          </p>
+        </div>
+      )}
+
       {/* Exam details */}
       <div className="bg-surface border border-black/8 rounded-xl p-4">
-        <p className="text-[11px] font-medium text-text-dark/40 uppercase tracking-wide mb-3">Exam Details</p>
+        <p className="text-[11px] font-medium text-text-dark/40 uppercase tracking-wide mb-3">
+          Exam Details
+        </p>
         <div className="space-y-2">
           {[
             ['Title', exam.title],
@@ -32,6 +48,17 @@ export default function ReviewStep({ exam, sections, batchName }) {
         </div>
       </div>
 
+      {/* Google Form */}
+      {exam.googleForm?.linked && (
+        <div className="bg-violet-50 border border-violet-200 rounded-xl px-4 py-3 flex items-center gap-2">
+          <span className="text-violet-500 text-sm">🔗</span>
+          <p className="text-xs text-violet-700">
+            Google Form linked · Token:{' '}
+            <span className="font-mono font-bold">{exam.googleForm.token}</span>
+          </p>
+        </div>
+      )}
+
       {/* Sections summary */}
       <div className="bg-surface border border-black/8 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
@@ -47,7 +74,9 @@ export default function ReviewStep({ exam, sections, batchName }) {
         <div className="divide-y divide-black/6">
           {sections.map(s => {
             const sMarks = parseFloat(
-              s.questions.reduce((a, q) => a + parseFloat(q.marks || s.defaultMarks || 1), 0).toFixed(2)
+              s.questions.reduce((a, q) =>
+                a + parseFloat(q.marks || s.defaultMarks || 1), 0
+              ).toFixed(2)
             );
             return (
               <div key={s.id} className="flex items-center justify-between py-2.5 gap-2">
@@ -81,7 +110,8 @@ export default function ReviewStep({ exam, sections, batchName }) {
         )}
         {totalQ > 0 && emptySections.length > 0 && (
           <p className="text-xs text-amber-600 mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            ⚠️ Empty sections: <span className="font-medium">{emptySections.map(s => s.name).join(', ')}</span>
+            ⚠️ Empty sections:{' '}
+            <span className="font-medium">{emptySections.map(s => s.name).join(', ')}</span>
           </p>
         )}
       </div>

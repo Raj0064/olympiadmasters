@@ -17,6 +17,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { rescoreExamSubmissions } from "./submission.service";
 
 // ─── Helper: Sort options A,B,C,D ─────────────────────────────────────────────
 function sortOptions(options = {}) {
@@ -82,26 +83,36 @@ export async function createExam(examData, sections) {
   );
 
   // Save exam
-  const examRef = await addDoc(collection(db, "exams"), {
-    title: examData.title.trim(),
-    grade: examData.grade,
-    duration: parseInt(examData.duration) || 0,
-    scheduledAt: examData.scheduledAt || null,
-    windowEnd: examData.windowEnd || null,
-    tags: examData.tags || [],
-    sections: sectionsWithTotals.map((s) => ({
-      id: s.id,
-      name: s.name,
-      defaultMarks: parseFloat(s.defaultMarks) || 1,
-      totalMarks: s.totalMarks,
-      totalQuestions: s.totalQuestions,
-    })),
-    totalMarks,
-    totalQuestions,
-    isActive: examData.isActive ?? false,
-    isResultPublished: false,
-    createdAt: serverTimestamp(),
-  });
+const examRef = await addDoc(collection(db, "exams"), {
+  title: examData.title.trim(),
+  grade: examData.grade,
+  duration: parseInt(examData.duration) || 0,
+  scheduledAt: examData.scheduledAt || null,
+  windowEnd: examData.windowEnd || null,
+  tags: examData.tags || [],
+  sections: sectionsWithTotals.map((s) => ({
+    id: s.id,
+    name: s.name,
+    defaultMarks: parseFloat(s.defaultMarks) || 1,
+    totalMarks: s.totalMarks,
+    totalQuestions: s.totalQuestions,
+  })),
+  totalMarks,
+  totalQuestions,
+  isActive: examData.isActive ?? false,
+  isResultPublished: false,
+  createdAt: serverTimestamp(),
+  // Google Form config — null if not linked
+  googleForm: examData.googleForm
+    ? {
+        appsScriptUrl: examData.googleForm.appsScriptUrl || "",
+        token: examData.googleForm.token || "",
+        formId: examData.googleForm.formId || "",
+        linked: true,
+      }
+    : null,
+});
+
 
   // Save questions
   const batch = writeBatch(db);
@@ -121,6 +132,9 @@ export async function createExam(examData, sections) {
         tags: q.tags || [],
         order: idx,
         imageSize: q.imageSize || "medium",
+        googleFormItemId: q.googleFormItemId || "", // ← ADD
+        isNameField: q.isNameField || false,
+        isEmailField: q.isEmailField || false,
       });
     });
   });
@@ -196,6 +210,7 @@ export function checkExamAccess(exam, userProfile) {
 // ─── Update: any exam fields ──────────────────────────────────────────────────
 export async function updateExam(examId, data) {
   await updateDoc(doc(db, "exams", examId), data);
+
 }
 
 // ─── Toggle: isActive ─────────────────────────────────────────────────────────
@@ -218,4 +233,113 @@ export async function deleteExam(examId) {
   await batch.commit();
 
   await deleteDoc(doc(db, "exams", examId));
+}
+
+// ─── Update: exam + questions (full edit) ────────────────────────────────────
+export async function updateExamFull(examId, examData, sections, originalQuestionIds = []) {
+  // Calculate totals
+  const sectionsWithTotals = sections.map((s) => {
+    const sectionTotalQuestions = s.questions.length;
+    const sectionTotalMarks = s.questions.reduce(
+      (sum, q) =>
+        sum + (parseFloat(q.marks) || parseFloat(s.defaultMarks) || 1),
+      0
+    );
+    return {
+      ...s,
+      totalQuestions: sectionTotalQuestions,
+      totalMarks: sectionTotalMarks,
+    };
+  });
+
+  const totalQuestions = sectionsWithTotals.reduce(
+    (sum, s) => sum + s.totalQuestions,
+    0
+  );
+  const totalMarks = sectionsWithTotals.reduce(
+    (sum, s) => sum + s.totalMarks,
+    0
+  );
+
+  // Update exam document
+  await updateDoc(doc(db, "exams", examId), {
+    title: examData.title.trim(),
+    grade: examData.grade,
+    duration: parseInt(examData.duration) || 0,
+    scheduledAt: examData.scheduledAt || null,
+    windowEnd: examData.windowEnd || null,
+    tags: examData.tags || [],
+    sections: sectionsWithTotals.map((s) => ({
+      id: s.id,
+      name: s.name,
+      defaultMarks: parseFloat(s.defaultMarks) || 1,
+      totalMarks: s.totalMarks,
+      totalQuestions: s.totalQuestions,
+    })),
+    totalMarks,
+    totalQuestions,
+    googleForm: examData.googleForm
+      ? {
+          appsScriptUrl: examData.googleForm.appsScriptUrl || "",
+          token: examData.googleForm.token || "",
+          formId: examData.googleForm.formId || "",
+          linked: true,
+        }
+      : null,
+  });
+
+  // Sync questions
+  const batch = writeBatch(db);
+
+  // Current question IDs from UI
+  const currentIds = new Set(
+    sectionsWithTotals.flatMap((s) =>
+      s.questions.map((q) => q._firestoreId).filter(Boolean)
+    )
+  );
+
+  // Delete removed questions
+  originalQuestionIds.forEach((qId) => {
+    if (!currentIds.has(qId)) {
+      batch.delete(doc(db, "questions", qId));
+    }
+  });
+
+  // Update existing + add new questions
+  sectionsWithTotals.forEach((section) => {
+    section.questions.forEach((q, idx) => {
+      const qData = {
+        examId: examId,
+        sectionId: section.id,
+        text: q.text || "",
+        imageUrl: q.imageUrl || "",
+        options: sortOptions(q.options),
+        correctAnswer: q.correctAnswer,
+        marks: parseFloat(q.marks) || parseFloat(section.defaultMarks) || 1,
+        explanation: q.explanation || "",
+        explanationImageUrl: q.explanationImageUrl || "",
+        tags: q.tags || [],
+        order: idx,
+        imageSize: q.imageSize || "medium",
+        googleFormItemId: q.googleFormItemId || "",
+        isNameField: q.isNameField || false,
+        isEmailField: q.isEmailField || false,
+      };
+
+      if (q._firestoreId) {
+        // Existing question → update
+        batch.update(doc(db, "questions", q._firestoreId), qData);
+      } else {
+        // New question → add
+        const newRef = doc(collection(db, "questions"));
+        batch.set(newRef, qData);
+      }
+    });
+  });
+
+  await batch.commit();
+  // after syncing questions...
+  await rescoreExamSubmissions(examId);
+  
+  return examId;
 }

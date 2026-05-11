@@ -130,3 +130,15 @@ export async function resetStudentPassword(email) {
 export async function deleteStudent(uid) {
   await deleteDoc(doc(db, "users", uid));
 }
+
+// Look up a student by email — used by bulk results import
+export async function getStudentByEmail(email) {
+  const q = query(
+    collection(db, "users"),
+    where("email", "==", email.trim().toLowerCase()),
+    where("role", "==", "student")
+  );
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
