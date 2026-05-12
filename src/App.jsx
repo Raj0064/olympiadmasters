@@ -37,6 +37,8 @@ const App = () => {
         {/* ── Public ───────────────────────────────────────────────── */}
         <Route path="/login" element={<Login />} />
 
+        <Route path="/" element={<Navigate to="/login" replace />} />  {/* ← add this */}
+
         {/* ── Error Pages ──────────────────────────────────────────── */}
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/error" element={<ServerError />} />
