@@ -3,31 +3,22 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate, Navigate } from "react-router-dom";
 
 const Login = () => {
-  const { login, userProfile, currentUser, loading } = useAuth();
-  const navigate = useNavigate();
+  const { login, userProfile, currentUser } = useAuth();
+  // ↑ removed `loading` — AuthContext handles that now
 
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-gray-400 font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
   // ── Redirect if already logged in ──────────────────────
   if (currentUser) {
-    if (userProfile?.role === "admin") {
+    if (!userProfile) return null;
+    if (userProfile.role === "admin") {
       return <Navigate to="/admin" replace />;
     }
-    return <Navigate to="/student" replace />; // ← fixed
+    return <Navigate to="/student" replace />;
   }
 
   const handleLogin = async (e) => {
@@ -37,15 +28,17 @@ const Login = () => {
 
     try {
       await login(email, password);
+      // No navigate() here — onAuthStateChanged triggers automatically
+      // which updates currentUser → Login redirects above handle it
     } catch (err) {
       switch (err.code) {
-        case "auth/invalid-credential": // Firebase v9.6+ — covers wrong password + user not found
+        case "auth/invalid-credential":
           setError("Invalid email or password.");
           break;
-        case "auth/user-not-found":     // legacy SDK fallback
+        case "auth/user-not-found":
           setError("No account found with this email.");
           break;
-        case "auth/wrong-password":     // legacy SDK fallback
+        case "auth/wrong-password":
           setError("Incorrect password.");
           break;
         case "auth/invalid-email":

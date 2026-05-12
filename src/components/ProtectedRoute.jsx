@@ -4,41 +4,25 @@ import { useAuth } from "../context/AuthContext";
 const ProtectedRoute = ({ children, role, roles }) => {
   const { currentUser, userProfile, loading } = useAuth();
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-sm text-gray-400 font-medium">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // Auth still loading — AuthContext shows spinner already
+  if (loading) return null;
 
-  // Not logged in
+  // Not logged in — send to login
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
 
+  // Profile not fetched yet — wait
+  if (!userProfile) return null;
+
   // Single role check
-  if (role && userProfile?.role !== role) {
-    return (
-      <Navigate
-        to={userProfile?.role === "admin" ? "/admin" : "/dashboard"}
-        replace
-      />
-    );
+  if (role && userProfile.role !== role) {
+    return <Navigate to="/unauthorized" replace />;  // ← changed
   }
 
   // Multiple roles check
-  if (roles && !roles.includes(userProfile?.role)) {
-    return (
-      <Navigate
-        to={userProfile?.role === "admin" ? "/admin" : "/dashboard"}
-        replace
-      />
-    );
+  if (roles && !roles.includes(userProfile.role)) {
+    return <Navigate to="/unauthorized" replace />;  // ← changed
   }
 
   return children;

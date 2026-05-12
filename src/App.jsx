@@ -2,8 +2,13 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./pages/Login.jsx";
 import ExamRoom from "./pages/ExamRoom.jsx";
-import Leaderboard from "./pages/Leaderboard.jsx";           // ← add
+import Leaderboard from "./pages/Leaderboard.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
+
+import NotFound from "./pages/ErrorPages/NotFound.jsx";
+import Unauthorized from "./pages/ErrorPages/Unauthorized.jsx";
+import ServerError from "./pages/ErrorPages/ServerError.jsx";
 
 import StudentLayout from "./components/student/StudentLayout.jsx";
 import StudentDashboard from "./pages/student/StudentDashboard.jsx";
@@ -26,45 +31,86 @@ import SubmissionView from "./pages/admin/AdminSubmissionView.jsx";
 
 const App = () => {
   return (
-    <Routes>
-      {/* Public */}
-      <Route path="/login" element={<Login />} />
+    <ErrorBoundary>
+      <Routes>
 
-      {/* ── Full-screen pages (no layout shell) ─────────────────────────── */}
-      <Route path="/exam/:examId" element={<ProtectedRoute><ExamRoom /></ProtectedRoute>} />
-      <Route path="/student/results/:examId" element={<ProtectedRoute><StudentResultDetail /></ProtectedRoute>} />
+        {/* ── Public ───────────────────────────────────────────────── */}
+        <Route path="/login" element={<Login />} />
 
-      {/* Leaderboard — accessible by both students and admins */}
-      {/* URL shape: /leaderboard?type=exam&examId=xxx&batchId=xxx  */}
-      {/*            /leaderboard?type=batch&batchId=xxx            */}
-      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+        {/* ── Error Pages ──────────────────────────────────────────── */}
+        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/error" element={<ServerError />} />
 
-      {/* Student Layout */}
-      <Route path="/student" element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
-        <Route index element={<StudentDashboard />} />
-        <Route path="exams" element={<StudentExams />} />
-        <Route path="performance" element={<StudentPerformance />} />
-        <Route path="profile" element={<StudentProfile />} />
-      </Route>
+        {/* ── Student — full screen ─────────────────────────────────── */}
+        <Route
+          path="/exam/:examId"
+          element={
+            <ProtectedRoute role="student">
+              <ExamRoom />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/results/:examId"
+          element={
+            <ProtectedRoute role="student">
+              <StudentResultDetail />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Admin Layout */}
-      <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
-        <Route index element={<AdminDashboard />} />
-        <Route path="students" element={<AdminStudents />} />
-        <Route path="students/:uid" element={<ViewStudent />} />
-        <Route path="batches" element={<AdminBatches />} />
-        <Route path="batches/:batchId" element={<ViewBatch />} />
-        <Route path="exams" element={<AdminExams />} />
-        <Route path="exams/create" element={<AdminCreateExam />} />
-        <Route path="exams/:examId/edit" element={<AdminCreateExam />} />
-        <Route path="exams/:examId/submissions" element={<ExamSubmissions />} />
-        <Route path="exams/:examId/submissions/:submissionId" element={<SubmissionView />} />
-        <Route path="results" element={<AdminResults />} />
-      </Route>
+        {/* ── Leaderboard — both roles ──────────────────────────────── */}
+        <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute>
+              <Leaderboard />
+            </ProtectedRoute>
+          }
+        />
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
+        {/* ── Student Layout ────────────────────────────────────────── */}
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute role="student">
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<StudentDashboard />} />
+          <Route path="exams" element={<StudentExams />} />
+          <Route path="performance" element={<StudentPerformance />} />
+          <Route path="profile" element={<StudentProfile />} />
+        </Route>
+
+        {/* ── Admin Layout ──────────────────────────────────────────── */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute role="admin">
+              <AdminLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="students" element={<AdminStudents />} />
+          <Route path="students/:uid" element={<ViewStudent />} />
+          <Route path="batches" element={<AdminBatches />} />
+          <Route path="batches/:batchId" element={<ViewBatch />} />
+          <Route path="exams" element={<AdminExams />} />
+          <Route path="exams/create" element={<AdminCreateExam />} />
+          <Route path="exams/:examId/edit" element={<AdminCreateExam />} />
+          <Route path="exams/:examId/submissions" element={<ExamSubmissions />} />
+          <Route path="exams/:examId/submissions/:submissionId" element={<SubmissionView />} />
+          <Route path="results" element={<AdminResults />} />
+        </Route>
+
+        {/* ── 404 — must be last, only one wildcard ────────────────── */}
+        <Route path="*" element={<NotFound />} />
+
+      </Routes>
+    </ErrorBoundary>
   );
 };
 

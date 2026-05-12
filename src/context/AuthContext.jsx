@@ -1,76 +1,3 @@
-// import { createContext, useContext, useEffect, useState } from "react";
-// import { auth } from "../firebase";
-// import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
-// import { doc, getDoc } from "firebase/firestore";
-// import { db } from "../firebase";
-
-// export const AuthContext = createContext();
-
-// export const useAuth = () => useContext(AuthContext);
-
-// const AuthProvider = ({ children }) => {
-//   const [currentUser, setCurrentUser] = useState(null);
-//   const [userProfile, setUserProfile] = useState(null);
-//   const [loading, setLoading] = useState(true);
-
-//   // Login function
-//   const login = (email, password) => {
-//     return signInWithEmailAndPassword(auth, email, password);
-//   };
-
-//   // Logout function
-//   const logout = () => {
-//     return signOut(auth);
-//   };
-
-//   useEffect(() => {
-//     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-//       setCurrentUser(user);
-
-//       if (user) {
-//         try {
-//           const docRef = doc(db, "users", user.uid);
-//           const docSnap = await getDoc(docRef);
-//           if (docSnap.exists()) {
-//             setUserProfile(docSnap.data());
-//           } else {
-//             // User exists in Auth but not in Firestore (deleted/incomplete signup)
-//             setUserProfile(null);
-//           }
-//         } catch (err) {
-//           console.error("Failed to fetch user profile:", err);
-//           setUserProfile(null);
-//           // ── CRITICAL: must still unblock the app ──
-//         } finally {
-//           setLoading(false); // ← moved here — guaranteed to run
-//         }
-//       } else {
-//         setUserProfile(null);
-//         setLoading(false);
-//       }
-//     });
-
-//     return () => unsubscribe();
-//   }, []);
-
-//   const value = {
-//     currentUser,    // Firebase auth user
-//     userProfile,    // Firestore user data (name, role, batchId etc)
-//     login,
-//     logout,
-//     loading
-//   };
-
-//   return (
-//     <AuthContext.Provider value={value}>
-//       {/* Don't render children until auth state is known */}
-//       {!loading && children}
-//     </AuthContext.Provider>
-//   );
-// };
-
-// export default AuthProvider;
-
 import {
   createContext,
   useContext,
@@ -149,9 +76,16 @@ export default function AuthProvider({ children }) {
     isStudent,
   };
 
-  return (
+ return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading ? children : (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-400 font-medium">Loading...</p>
+          </div>
+        </div>
+      )}
     </AuthContext.Provider>
   );
 }
