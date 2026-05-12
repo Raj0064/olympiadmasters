@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import StatCard from "../../components/admin/StatCard";
-import Button from "../../components/ui/button";
+import Button from "../../components/ui/Button";
 
 import { getExams } from "../../services/exam.service";
 import {
