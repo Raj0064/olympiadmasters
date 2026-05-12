@@ -16,7 +16,7 @@ export async function extractFromGoogleForm(formUrl) {
     "&formUrl=" +
     encodeURIComponent(formUrl);
 
-  console.log("📡 Calling:", url);
+  //console.log("📡 Calling:", url);
 
   const resp = await fetch(url);
 
@@ -27,7 +27,7 @@ export async function extractFromGoogleForm(formUrl) {
 
   const text = await resp.text();
 
-  console.log("📥 Response:", text.slice(0, 200));
+  //console.log("📥 Response:", text.slice(0, 200));
 
   if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
     throw new Error(
@@ -53,13 +53,13 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
   const safeQuestions = questions || [];
   const safeAnswers = firebaseAnswers || {};
 
-  console.log("[Convert] Firebase answers:", safeAnswers);
-  console.log("[Convert] Total questions:", safeQuestions.length);
-  console.log(
+  //console.log("[Convert] Firebase answers:", safeAnswers);
+  //console.log("[Convert] Total questions:", safeQuestions.length);
+  //console.log(
     "[Convert] Questions with googleFormItemId:",
     safeQuestions.filter((q) => q.googleFormItemId).length
   );
-  console.log("[Convert] Sample question:", {
+  //console.log("[Convert] Sample question:", {
     id: safeQuestions[0]?.id,
     googleFormItemId: safeQuestions[0]?.googleFormItemId,
     options: safeQuestions[0]?.options,
@@ -67,13 +67,13 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
 
   safeQuestions.forEach((q) => {
     if (!q.googleFormItemId) {
-      console.log("[Convert] SKIP - no googleFormItemId:", q.id);
+      //console.log("[Convert] SKIP - no googleFormItemId:", q.id);
       return;
     }
 
     if (q.isNameField) {
       googleAnswers[q.googleFormItemId] = studentName || "";
-      console.log(
+      //console.log(
         "[Convert] Name field:",
         q.googleFormItemId,
         "→",
@@ -84,7 +84,7 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
 
     if (q.isEmailField) {
       googleAnswers[q.googleFormItemId] = studentEmail || "";
-      console.log(
+      //console.log(
         "[Convert] Email field:",
         q.googleFormItemId,
         "→",
@@ -94,7 +94,7 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
     }
 
     const selectedOption = safeAnswers[q.id];
-    console.log(
+    //console.log(
       "[Convert] Q:",
       q.id,
       "answer:",
@@ -106,14 +106,14 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
     if (!selectedOption) return;
 
     const optionText = q.options?.[selectedOption];
-    console.log("[Convert] Option text:", optionText);
+    //console.log("[Convert] Option text:", optionText);
 
     if (!optionText) return;
 
     googleAnswers[q.googleFormItemId] = optionText;
   });
 
-  console.log("[Convert] Final googleAnswers:", googleAnswers);
+  //console.log("[Convert] Final googleAnswers:", googleAnswers);
   return googleAnswers;
 }
 
@@ -145,7 +145,7 @@ export async function submitToGoogleForm({
     );
   }
 
-  console.log("[GoogleForm] Submitting:", {
+  //console.log("[GoogleForm] Submitting:", {
     token,
     studentName,
     studentEmail,
@@ -176,6 +176,6 @@ export async function submitToGoogleForm({
     throw new Error(result.message || result.error);
   }
 
-  console.log("[GoogleForm] Success:", result);
+  //console.log("[GoogleForm] Success:", result);
   return result;
 }

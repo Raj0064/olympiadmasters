@@ -63,7 +63,7 @@ const ExamProvider = ({ children }) => {
         setLoading(true);
 
         const fullExam = await getFullExam(examId);
-        console.log(fullExam);
+       
 
         const { allowed, reason } = checkExamAccess(fullExam, userProfile);
         if (!allowed) { setError(reason); setLoading(false); return; }

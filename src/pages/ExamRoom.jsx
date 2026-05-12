@@ -157,7 +157,7 @@ function ExamRoomContent() {
         const gformKey = `exam_${exam.id}_${currentUser.uid}_gformDone`;
 
         if (localStorage.getItem(gformKey)) {
-          console.log("[GoogleForm] Already submitted — skipping.");
+          //console.log("[GoogleForm] Already submitted — skipping.");
         } else {
           retryAsync(
             () =>
@@ -174,7 +174,7 @@ function ExamRoomContent() {
           )
             .then(() => {
               localStorage.setItem(gformKey, "1");
-              console.log("[GoogleForm] Submitted and marked done.");
+              //console.log("[GoogleForm] Submitted and marked done.");
             })
             .catch((err) =>
               console.warn(

@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 
 const seedDatabase = async () => {
   try {
-    console.log("🌱 Seeding started...");
+    //console.log("🌱 Seeding started...");
 
     // ─── Step 1 — Create Admin Auth + Firestore ──────────────
     const adminCred = await createUserWithEmailAndPassword(
@@ -21,7 +21,7 @@ const seedDatabase = async () => {
       batchId: "",
     });
 
-    console.log("✅ Admin created");
+    //console.log("✅ Admin created");
 
     // ─── Step 2 — Create Student Auth + Firestore ────────────
     const studentCred = await createUserWithEmailAndPassword(
@@ -38,7 +38,7 @@ const seedDatabase = async () => {
       batchId: "batch_01",
     });
 
-    console.log("✅ Student created");
+    //console.log("✅ Student created");
 
     // ─── Step 3 — Create Batch ────────────────────────────────
     await setDoc(doc(db, "batches", "batch_01"), {
@@ -48,7 +48,7 @@ const seedDatabase = async () => {
       examIds: ["exam_001"],
     });
 
-    console.log("✅ Batch created");
+    //console.log("✅ Batch created");
 
     // ─── Step 4 — Create Exam ─────────────────────────────────
     await setDoc(doc(db, "exams", "exam_001"), {
@@ -71,7 +71,7 @@ const seedDatabase = async () => {
       ],
     });
 
-    console.log("✅ Exam created");
+    //console.log("✅ Exam created");
 
     // ─── Step 5 — Create Questions ────────────────────────────
     const questions = [
@@ -149,11 +149,11 @@ const seedDatabase = async () => {
       await addDoc(collection(db, "questions"), question);
     }
 
-    console.log("✅ Questions created");
-    console.log("🎉 Seeding complete!");
-    console.log("─────────────────────────────");
-    console.log("Admin    → admin@olympiad.com / admin123");
-    console.log("Student  → student@olympiad.com / student123");
+    //console.log("✅ Questions created");
+    //console.log("🎉 Seeding complete!");
+    //console.log("─────────────────────────────");
+    //console.log("Admin    → admin@olympiad.com / admin123");
+    //console.log("Student  → student@olympiad.com / student123");
   } catch (err) {
     console.error("❌ Seeding failed:", err.message);
   }
