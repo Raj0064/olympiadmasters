@@ -1026,7 +1026,7 @@ export default function SectionsStep({ sections, setSections, onGFormImport }) {
   const handleGFormImport = (parsed) => {
     parsed.sections.forEach(s =>
       s.questions.forEach(q =>
-        //console.log(q.text?.slice(0, 20) || '[img only]', '→', q.imageSize)
+        console.log(q.text?.slice(0, 20) || '[img only]', '→', q.imageSize)
       )
     );
     setSections(parsed.sections);
