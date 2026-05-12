@@ -10,11 +10,22 @@ const useTimer = (durationSeconds, storageKey = null) => {
     const saved = localStorage.getItem(storageKey);
     let startedAt;
 
-    if (saved) {
-      // Returning student — use existing startedAt
-      startedAt = parseInt(saved, 10);
+    if (saved !== null) {
+      const parsed = parseInt(saved, 10);
+
+      if (!isNaN(parsed) && isFinite(parsed) && parsed > 0) {
+        // Valid saved timestamp — returning student
+        startedAt = parsed;
+      } else {
+        // Corrupted value — treat as fresh start and overwrite
+        console.warn(
+          "[useTimer] Corrupted startedAt in localStorage, resetting."
+        );
+        startedAt = Date.now();
+        localStorage.setItem(storageKey, startedAt);
+      }
     } else {
-      // First entry — record now as startedAt
+      // First entry
       startedAt = Date.now();
       localStorage.setItem(storageKey, startedAt);
     }
@@ -22,9 +33,9 @@ const useTimer = (durationSeconds, storageKey = null) => {
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
     const remaining = Math.max(durationSeconds - elapsed, 0);
     setTimeLeft(remaining);
-  }, [durationSeconds]);
+  }, [durationSeconds, storageKey]); // ← also added storageKey as dep (see Bug 3)
 
-  // Countdown
+  // Countdown — restarts whenever timeLeft is freshly initialised (was null, now a number)
   useEffect(() => {
     if (timeLeft === null || timeLeft <= 0) return;
 
@@ -38,8 +49,8 @@ const useTimer = (durationSeconds, storageKey = null) => {
       });
     }, 1000);
 
-    return () => clearInterval(timerId);
-  }, [timeLeft === null]);
+    return () => clearInterval(timerId); // ← cleanup prevents double-interval on re-init
+  }, [timeLeft === null]); // keep the boolean trick — only re-fires on null↔number transition
 
   const minutes = Math.floor((timeLeft ?? 0) / 60);
   const seconds = (timeLeft ?? 0) % 60;

@@ -1,15 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 
-const SuccessDialog = ({ submitting, submitResult, examId }) => {
+const SuccessDialog = ({ submitting, submitResult, examId, isResultPublished }) => {
   const navigate = useNavigate();
 
   const answered = submitResult ? submitResult.correct + submitResult.wrong : 0;
   const notAnswered = submitResult ? submitResult.skipped : 0;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
-      style={{ pointerEvents: 'all' }}>
-
+    <div
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
+      style={{ pointerEvents: 'all' }}
+    >
       <div className="bg-surface rounded-2xl shadow-2xl p-8 w-full max-w-sm flex flex-col items-center gap-6">
 
         {submitting ? (
@@ -26,7 +27,13 @@ const SuccessDialog = ({ submitting, submitResult, examId }) => {
           <>
             {/* Checkmark */}
             <div className="w-16 h-16 rounded-full bg-answered/10 border-2 border-answered flex items-center justify-center">
-              <svg className="w-8 h-8 text-answered" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+              <svg
+                className="w-8 h-8 text-answered"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={3}
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
@@ -49,20 +56,40 @@ const SuccessDialog = ({ submitting, submitResult, examId }) => {
               </div>
             </div>
 
+            {/* Result not published notice */}
+            {!isResultPublished && (
+              <div className="w-full flex items-start gap-2.5 bg-warning-bg border border-warning/20 rounded-xl px-3.5 py-3">
+                <span className="text-base mt-0.5">🔒</span>
+                <div>
+                  <p className="text-[11px] font-bold text-warning uppercase tracking-wide mb-0.5">
+                    Results Pending
+                  </p>
+                  <p className="text-xs text-warning/80 leading-relaxed">
+                    Your teacher hasn't published the results yet. You'll be able to view them once released.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Buttons */}
             <div className="flex gap-3 w-full">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-primary font-bold text-sm hover:border-primary transition"
+                className={`py-3 rounded-xl border-2 border-gray-200 text-primary font-bold text-sm hover:border-primary transition cursor-pointer ${isResultPublished ? 'flex-1' : 'w-full'
+                  }`}
               >
                 Dashboard
               </button>
-              <button
-                onClick={() => navigate(`/results/${examId}`)}
-                className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-primary transition"
-              >
-                View Results
-              </button>
+
+              {/* Only show if results are published */}
+              {isResultPublished && (
+                <button
+                  onClick={() => navigate(`/student/results/${examId}`)}
+                  className="flex-1 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-primary transition cursor-pointer"
+                >
+                  View Results
+                </button>
+              )}
             </div>
           </>
 

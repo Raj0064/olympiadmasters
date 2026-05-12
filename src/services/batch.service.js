@@ -133,8 +133,19 @@ export async function updateBatch(batchId, data) {
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
+// ✅ Updated deleteBatch
 export async function deleteBatch(batchId) {
-  await deleteDoc(doc(db, "batches", batchId));
+  // Clear batchId from all students in this batch
+  const studentsSnap = await getDocs(
+    query(collection(db, 'users'), where('batchId', '==', batchId))
+  );
+
+  const batch = writeBatch(db);
+  studentsSnap.docs.forEach((d) =>
+    batch.update(d.ref, { batchId: '' })
+  );
+  batch.delete(doc(db, 'batches', batchId));
+  await batch.commit();
 }
 
 /**

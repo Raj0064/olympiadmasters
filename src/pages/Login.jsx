@@ -11,24 +11,23 @@ const Login = () => {
   const [error, setError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
-  // Show spinner while auth state is being determined
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-gray-400 font-medium">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Already logged in → redirect away from login page
+  // ── Redirect if already logged in ──────────────────────
   if (currentUser) {
     if (userProfile?.role === "admin") {
       return <Navigate to="/admin" replace />;
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/student" replace />; // ← fixed
   }
 
   const handleLogin = async (e) => {
@@ -38,17 +37,15 @@ const Login = () => {
 
     try {
       await login(email, password);
-      // No navigate() here
-      // Once login() succeeds → onAuthStateChanged fires in AuthContext
-      // → userProfile gets fetched from Firestore
-      // → currentUser becomes truthy
-      // → the if (currentUser) block above redirects correctly
     } catch (err) {
       switch (err.code) {
-        case "auth/user-not-found":
+        case "auth/invalid-credential": // Firebase v9.6+ — covers wrong password + user not found
+          setError("Invalid email or password.");
+          break;
+        case "auth/user-not-found":     // legacy SDK fallback
           setError("No account found with this email.");
           break;
-        case "auth/wrong-password":
+        case "auth/wrong-password":     // legacy SDK fallback
           setError("Incorrect password.");
           break;
         case "auth/invalid-email":
@@ -60,7 +57,7 @@ const Login = () => {
         default:
           setError("Login failed. Please try again.");
       }
-      setLoginLoading(false); // only reset loading on error
+      setLoginLoading(false);
     }
   };
 
@@ -68,13 +65,13 @@ const Login = () => {
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-md bg-surface rounded-2xl shadow-lg p-8">
 
-        {/* Logo / Title */}
+        {/* Title */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-primary">Olympiad Masters</h1>
           <p className="text-sm text-gray-400 mt-1">Sign in to continue</p>
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
           <div className="bg-red-50 border border-red-300 text-red-600 text-sm px-4 py-3 rounded-xl mb-5">
             {error}
@@ -83,7 +80,6 @@ const Login = () => {
 
         {/* Form */}
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
-
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Email
@@ -115,18 +111,15 @@ const Login = () => {
           <button
             type="submit"
             disabled={loginLoading}
-            className="mt-2 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-primary transition disabled:opacity-50"
+            className="mt-2 py-3 rounded-xl bg-accent text-white font-bold text-sm hover:bg-primary transition disabled:opacity-50 cursor-pointer"
           >
             {loginLoading ? "Signing in..." : "Sign In"}
           </button>
-
         </form>
 
-        {/* Footer */}
         <p className="text-center text-xs text-gray-400 mt-6">
           Contact your teacher if you forgot your password.
         </p>
-
       </div>
     </div>
   );

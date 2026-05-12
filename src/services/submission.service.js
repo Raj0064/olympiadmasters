@@ -27,7 +27,8 @@ export function calculateScore(answers, questions) {
     if (!studentAnswer) {
       skipped++;
     } else if (studentAnswer === question.correctAnswer) {
-      score += parseFloat(question.marks) || 1;
+     const markVal = parseFloat(question.marks);
+     score += !isNaN(markVal) ? markVal : 1;
       correct++;
     } else {
       wrong++;
@@ -47,8 +48,7 @@ function buildSubmissionData({
   timeTaken,
 }) {
   const totalMarks = questions.reduce(
-    (sum, q) => sum + (parseFloat(q.marks) || 1),
-    0
+    (sum, q) => sum + (!isNaN(parseFloat(q.marks)) ? parseFloat(q.marks) : 1),0
   );
   const { score, correct, wrong, skipped } = calculateScore(answers, questions);
   const percentage =
@@ -166,8 +166,8 @@ export async function rescoreExamSubmissions(examId) {
   if (!subs.length || !questions.length) return;
 
   const totalMarks = questions.reduce(
-    (sum, q) => sum + (parseFloat(q.marks) || 1),
-    0
+  (sum, q) => sum + (!isNaN(parseFloat(q.marks)) ? parseFloat(q.marks) : 1),
+  0
   );
   const batch = writeBatch(db);
 

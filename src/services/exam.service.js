@@ -18,8 +18,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { rescoreExamSubmissions } from "./submission.service";
+import { safeDate } from "../utils/safeHelpers"; // ← fixed helper: null → null, not Date(0)
 
-// ─── Helper: Sort options A,B,C,D ─────────────────────────────────────────────
+// ─── Helper: Sort options A → B → C → D ──────────────────────────────────────
 function sortOptions(options = {}) {
   return ["A", "B", "C", "D"].reduce((acc, key) => {
     if (options[key] !== undefined) {
@@ -29,7 +30,7 @@ function sortOptions(options = {}) {
   }, {});
 }
 
-// ─── Helper: Normalize a single question ──────────────────────────────────────
+// ─── Helper: Normalize a single question document ─────────────────────────────
 function normalizeQuestion(d) {
   const data = d.data ? d.data() : d;
   return {
@@ -41,7 +42,7 @@ function normalizeQuestion(d) {
 
 // ─── Helper: Sort questions by section order, then question order ─────────────
 function sortQuestions(questions, sections) {
-  if (!sections || sections.length === 0) return questions;
+  if (!sections?.length) return questions;
 
   const sectionOrder = {};
   sections.forEach((s, idx) => {
@@ -52,7 +53,7 @@ function sortQuestions(questions, sections) {
     const sectionDiff =
       (sectionOrder[a.sectionId] ?? 999) - (sectionOrder[b.sectionId] ?? 999);
     if (sectionDiff !== 0) return sectionDiff;
-    return a.order - b.order;
+    return (a.order ?? 0) - (b.order ?? 0);
   });
 }
 
@@ -82,39 +83,35 @@ export async function createExam(examData, sections) {
     0
   );
 
-  // Save exam
-const examRef = await addDoc(collection(db, "exams"), {
-  title: examData.title.trim(),
-  grade: examData.grade,
-  duration: parseInt(examData.duration) || 0,
-  scheduledAt: examData.scheduledAt || null,
-  windowEnd: examData.windowEnd || null,
-  tags: examData.tags || [],
-  sections: sectionsWithTotals.map((s) => ({
-    id: s.id,
-    name: s.name,
-    defaultMarks: parseFloat(s.defaultMarks) || 1,
-    totalMarks: s.totalMarks,
-    totalQuestions: s.totalQuestions,
-  })),
-  totalMarks,
-  totalQuestions,
-  isActive: examData.isActive ?? false,
-  isResultPublished: false,
-  createdAt: serverTimestamp(),
-  // Google Form config — null if not linked
-  googleForm: examData.googleForm
-    ? {
-        appsScriptUrl: examData.googleForm.appsScriptUrl || "",
-        token: examData.googleForm.token || "",
-        formId: examData.googleForm.formId || "",
-        linked: true,
-      }
-    : null,
-});
+  const examRef = await addDoc(collection(db, "exams"), {
+    title: examData.title.trim(),
+    grade: examData.grade,
+    duration: parseInt(examData.duration) || 0,
+    scheduledAt: examData.scheduledAt || null,
+    windowEnd: examData.windowEnd || null,
+    tags: examData.tags || [],
+    sections: sectionsWithTotals.map((s) => ({
+      id: s.id,
+      name: s.name,
+      defaultMarks: parseFloat(s.defaultMarks) || 1,
+      totalMarks: s.totalMarks,
+      totalQuestions: s.totalQuestions,
+    })),
+    totalMarks,
+    totalQuestions,
+    isActive: examData.isActive ?? false,
+    isResultPublished: false,
+    createdAt: serverTimestamp(),
+    googleForm: examData.googleForm
+      ? {
+          appsScriptUrl: examData.googleForm.appsScriptUrl || "",
+          token: examData.googleForm.token || "",
+          formId: examData.googleForm.formId || "",
+          linked: true,
+        }
+      : null,
+  });
 
-
-  // Save questions
   const batch = writeBatch(db);
   sectionsWithTotals.forEach((section) => {
     section.questions.forEach((q, idx) => {
@@ -132,7 +129,7 @@ const examRef = await addDoc(collection(db, "exams"), {
         tags: q.tags || [],
         order: idx,
         imageSize: q.imageSize || "medium",
-        googleFormItemId: q.googleFormItemId || "", // ← ADD
+        googleFormItemId: q.googleFormItemId || "",
         isNameField: q.isNameField || false,
         isEmailField: q.isEmailField || false,
       });
@@ -181,24 +178,39 @@ export async function getFullExam(examId) {
 }
 
 // ─── Access Control ───────────────────────────────────────────────────────────
+/**
+ * THE BUG THAT CAUSED "Exam window has closed" WITH NULL DATES:
+ *
+ *   Old safeDate(null) → new Date(0)  →  Jan 1, 1970
+ *   Then: now > new Date(0)  →  always true  →  "Exam window has closed" ❌
+ *
+ * Fixed safeDate(null) → null
+ *   Then: null && now > null  →  false  →  no restriction ✓
+ *
+ * Rule: null scheduledAt = no start restriction (open immediately)
+ *       null windowEnd   = no end restriction   (open indefinitely)
+ */
 export function checkExamAccess(exam, userProfile) {
   const now = new Date();
-  const start = exam.scheduledAt?.toDate?.() || null;
-  const end = exam.windowEnd?.toDate?.() || null;
+  const start = safeDate(exam.scheduledAt); // null → no start restriction
+  const end = safeDate(exam.windowEnd); // null → no end restriction
 
   if (!exam.isActive)
     return { allowed: false, reason: "This exam is not active yet." };
 
+  // null start → skip; truthy start → enforce
   if (start && now < start)
     return {
       allowed: false,
       reason: `Exam starts at ${start.toLocaleTimeString()}.`,
     };
 
+  // null end → skip; truthy end → enforce
   if (end && now > end)
     return { allowed: false, reason: "Exam window has closed." };
 
-  if (exam.grade !== userProfile.grade)
+  // Coerce both sides to string — guards against number 6 vs string "6"
+  if (String(exam.grade) !== String(userProfile.grade))
     return {
       allowed: false,
       reason: "This exam is not assigned to your grade.",
@@ -223,21 +235,35 @@ export async function toggleExamResults(examId, isResultPublished) {
   await updateDoc(doc(db, "exams", examId), { isResultPublished });
 }
 
-// ─── Delete: exam + all questions ────────────────────────────────────────────
+// ─── Delete: exam + all its questions ────────────────────────────────────────
+
+// ✅ Updated deleteExam
 export async function deleteExam(examId) {
-  const q = query(collection(db, "questions"), where("examId", "==", examId));
-  const snap = await getDocs(q);
+  // 1. Delete questions
+  const qSnap = await getDocs(
+    query(collection(db, 'questions'), where('examId', '==', examId))
+  );
+
+  // 2. Delete submissions
+  const sSnap = await getDocs(
+    query(collection(db, 'submissions'), where('examId', '==', examId))
+  );
 
   const batch = writeBatch(db);
-  snap.docs.forEach((d) => batch.delete(d.ref));
+  qSnap.docs.forEach((d) => batch.delete(d.ref));
+  sSnap.docs.forEach((d) => batch.delete(d.ref));
   await batch.commit();
 
-  await deleteDoc(doc(db, "exams", examId));
+  await deleteDoc(doc(db, 'exams', examId));
 }
 
 // ─── Update: exam + questions (full edit) ────────────────────────────────────
-export async function updateExamFull(examId, examData, sections, originalQuestionIds = []) {
-  // Calculate totals
+export async function updateExamFull(
+  examId,
+  examData,
+  sections,
+  originalQuestionIds = []
+) {
   const sectionsWithTotals = sections.map((s) => {
     const sectionTotalQuestions = s.questions.length;
     const sectionTotalMarks = s.questions.reduce(
@@ -293,9 +319,9 @@ export async function updateExamFull(examId, examData, sections, originalQuestio
 
   // Current question IDs from UI
   const currentIds = new Set(
-    sectionsWithTotals.flatMap((s) =>
-      s.questions.map((q) => q._firestoreId).filter(Boolean)
-    )
+    sectionsWithTotals
+      .flatMap((s) => s.questions.map((q) => q._firestoreId))
+      .filter(Boolean)
   );
 
   // Delete removed questions
@@ -340,6 +366,6 @@ export async function updateExamFull(examId, examData, sections, originalQuestio
   await batch.commit();
   // after syncing questions...
   await rescoreExamSubmissions(examId);
-  
+
   return examId;
 }

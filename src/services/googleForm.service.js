@@ -1,21 +1,17 @@
-/**
- * googleForm.service.js
- *
- * 1. Extract exam from Google Form URL (calls Apps Script)
- * 2. Submit answers to Google Form (calls Apps Script)
- *
- * Name field handling:
- *   Google Form has "Name" as first text question.
- *   On submit, automatically fills it with student's name.
- */
-
 const APPS_SCRIPT_URL = import.meta.env.VITE_APPSCRIPT_URL;
-  
-// ─── Extract exam from Google Form URL ────────────────────────────────────────
 
+// ─── Guard: catch missing env var early ──────────────────────────────────────
+function getScriptUrl() {
+  if (!APPS_SCRIPT_URL) {
+    throw new Error("VITE_APPSCRIPT_URL is not set. Check your .env file.");
+  }
+  return APPS_SCRIPT_URL;
+}
+
+// ─── Extract exam from Google Form URL ────────────────────────────────────────
 export async function extractFromGoogleForm(formUrl) {
   const url =
-    APPS_SCRIPT_URL +
+    getScriptUrl() + // ← throws early if env missing
     "?action=extractAndCreate" +
     "&formUrl=" +
     encodeURIComponent(formUrl);
@@ -23,15 +19,21 @@ export async function extractFromGoogleForm(formUrl) {
   console.log("📡 Calling:", url);
 
   const resp = await fetch(url);
+
+  // ── Guard: check HTTP status before reading body ──────────────────────────
+  if (!resp.ok) {
+    throw new Error(`Apps Script HTTP ${resp.status} ${resp.statusText}`);
+  }
+
   const text = await resp.text();
 
-  console.log("📥 Response:", text.slice(0, 200)); // ← Shows first 200 chars
+  console.log("📥 Response:", text.slice(0, 200));
 
   if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
     throw new Error(
       "Apps Script returned HTML instead of JSON.\n" +
-      "This means deployment failed or URL is wrong.\n" +
-      "Check console for details."
+        "This means deployment failed or URL is wrong.\n" +
+        "Check console for details."
     );
   }
 
@@ -44,23 +46,26 @@ export async function extractFromGoogleForm(formUrl) {
   return data;
 }
 
-
 function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
   const googleAnswers = {};
 
-  console.log("[Convert] Firebase answers:", firebaseAnswers);
-  console.log("[Convert] Total questions:", questions.length);
+  // ── Guard: null/undefined inputs ─────────────────────────────────────────
+  const safeQuestions = questions || [];
+  const safeAnswers = firebaseAnswers || {};
+
+  console.log("[Convert] Firebase answers:", safeAnswers);
+  console.log("[Convert] Total questions:", safeQuestions.length);
   console.log(
     "[Convert] Questions with googleFormItemId:",
-    questions.filter((q) => q.googleFormItemId).length
+    safeQuestions.filter((q) => q.googleFormItemId).length
   );
   console.log("[Convert] Sample question:", {
-    id: questions[0]?.id,
-    googleFormItemId: questions[0]?.googleFormItemId,
-    options: questions[0]?.options,
+    id: safeQuestions[0]?.id,
+    googleFormItemId: safeQuestions[0]?.googleFormItemId,
+    options: safeQuestions[0]?.options,
   });
 
-  questions.forEach((q) => {
+  safeQuestions.forEach((q) => {
     if (!q.googleFormItemId) {
       console.log("[Convert] SKIP - no googleFormItemId:", q.id);
       return;
@@ -88,7 +93,7 @@ function convertAnswers(firebaseAnswers, questions, studentName, studentEmail) {
       return;
     }
 
-    const selectedOption = firebaseAnswers[q.id];
+    const selectedOption = safeAnswers[q.id];
     console.log(
       "[Convert] Q:",
       q.id,
@@ -117,11 +122,10 @@ export async function submitToGoogleForm({
   token,
   studentName,
   studentEmail,
-  answers, // Firebase format: { firebaseQId: "A" }
-  questions, // Full question objects with googleFormItemId + options
+  answers,
+  questions,
   timedOut,
 }) {
-  // Convert answers + fill name/email fields
   const googleAnswers = convertAnswers(
     answers,
     questions,
@@ -130,9 +134,15 @@ export async function submitToGoogleForm({
   );
 
   const answeredCount = Object.keys(googleAnswers).length;
+
+  // ── Always submit — even if student skipped everything. ───────────────────
+  // Name/email fields count as a valid response. A blank MCQ response
+  // still needs to be recorded in the Form (token + timedOut are always sent).
+  // Previous guard `if (answeredCount === 0) return` was wrong — removed.
   if (answeredCount === 0) {
-    console.warn("[GoogleForm] No answers to submit after conversion");
-    return { ok: false, reason: "no_answers", answeredCount: 0 };
+    console.warn(
+      "[GoogleForm] No answers after conversion — submitting anyway (name/email/token still sent)"
+    );
   }
 
   console.log("[GoogleForm] Submitting:", {
@@ -143,10 +153,10 @@ export async function submitToGoogleForm({
     timedOut,
   });
 
-  // POST to Apps Script
-  const resp = await fetch(APPS_SCRIPT_URL, {
+  const resp = await fetch(getScriptUrl(), {
+    // ← env guard
     method: "POST",
-    headers: { "Content-Type": "text/plain" }, // avoid CORS preflight
+    headers: { "Content-Type": "text/plain" },
     body: JSON.stringify({
       token,
       studentName: studentName || "",

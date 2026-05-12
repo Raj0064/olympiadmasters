@@ -41,26 +41,29 @@ import { db, auth, secondaryAuth } from "../firebase";
  * @param {{ name, email, password, grade, batchId }} param
  * @returns {string} new student uid
  */
+// ✅ Updated createStudent with cleanup on Firestore failure
+
 export async function createStudent({ name, email, password, grade, batchId }) {
-  // 1. Create Auth account on secondary instance
   const cred = await createUserWithEmailAndPassword(
-    secondaryAuth,
-    email.trim().toLowerCase(),
-    password
+    secondaryAuth, email.trim().toLowerCase(), password
   );
   const uid = cred.user.uid;
-
-  // 2. Sign out of secondary immediately — keeps it clean for next call
   await signOut(secondaryAuth);
 
-  // 3. Write Firestore profile
-  await setDoc(doc(db, "users", uid), {
-    name: name.trim(),
-    email: email.trim().toLowerCase(),
-    role: "student",
-    grade: String(grade), // ← always store as string
-    batchId: batchId || "",
-  });
+  try {
+    await setDoc(doc(db, 'users', uid), {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      role: 'student',
+      grade: String(grade),
+      batchId: batchId || '',
+    });
+  } catch (err) {
+    // Auth account exists but profile failed — delete the auth user
+    // to prevent a ghost account that blocks re-registration
+    try { await cred.user.delete(); } catch { /* best-effort */ }
+    throw err;
+  }
 
   return uid;
 }

@@ -34,17 +34,17 @@ const QuestionMap = () => {
 
     return "bg-surface text-text-muted border border-border hover:bg-primary/5 hover:border-primary/20";
   };
+// Summary counts — guard exam.questions
+  const answeredCount = (exam.questions ?? []).filter((q) => answers[q.id]).length;
 
-  const answeredCount = exam.questions.filter((q) => answers[q.id]).length;
-
-  const skippedCount = exam.questions.filter(
+  const skippedCount = (exam.questions ?? []).filter(
     (q) =>
       !answers[q.id] &&
       visitedQuestions.has(q.id) &&
       q.id !== currentQuestionId
   ).length;
 
-  const unseenCount = exam.questions.length - answeredCount;
+  const unseenCount = (exam.questions ?? []).length - answeredCount;
 
   return (
     <div className="flex h-full flex-col">
@@ -77,8 +77,8 @@ const QuestionMap = () => {
       {/* Grid */}
       <div className="mt-3 flex flex-1 flex-col gap-4 overflow-y-auto">
 
-        {exam.sections.map((section) => {
-          const sectionQuestions = exam.questions.filter(
+        {(exam.sections ?? []).map((section) => {
+          const sectionQuestions = (exam.questions ?? []).filter(
             (q) => q.sectionId === section.id
           );
 

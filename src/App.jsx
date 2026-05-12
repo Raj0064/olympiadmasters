@@ -1,10 +1,16 @@
-// src/App.jsx
 import { Routes, Route, Navigate } from "react-router-dom";
+
 import Login from "./pages/Login.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
 import ExamRoom from "./pages/ExamRoom.jsx";
+import Leaderboard from "./pages/Leaderboard.jsx";           // ← add
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import Results from "./pages/Results.jsx";
+
+import StudentLayout from "./components/student/StudentLayout.jsx";
+import StudentDashboard from "./pages/student/StudentDashboard.jsx";
+import StudentExams from "./pages/student/StudentExams.jsx";
+import StudentPerformance from "./pages/student/StudentPerformance.jsx";
+import StudentProfile from "./pages/student/StudentProfile.jsx";
+import StudentResultDetail from "./pages/student/StudentResultDetail.jsx";
 
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -17,8 +23,6 @@ import ViewBatch from "./pages/admin/AdminViewBatch.jsx";
 import ViewStudent from "./pages/admin/AdminViewStudent.jsx";
 import ExamSubmissions from "./pages/admin/AdminExamSubmissions.jsx";
 import SubmissionView from "./pages/admin/AdminSubmissionView.jsx";
-import MyPerformance from "./pages/MyPerformance.jsx";
-import Leaderboard from "./pages/Leaderboard.jsx";
 
 const App = () => {
   return (
@@ -26,52 +30,25 @@ const App = () => {
       {/* Public */}
       <Route path="/login" element={<Login />} />
 
-      {/* Student routes */}
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/exam/:examId"
-        element={
-          <ProtectedRoute>
-            <ExamRoom />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/results/:examId"
-        element={
-          <ProtectedRoute>
-            <Results />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/my-performance" element={<ProtectedRoute>
-        <MyPerformance />
-        </ProtectedRoute>} />
-      <Route
-        path="/leaderboard"
-        element={
-          <ProtectedRoute roles={["admin", "student"]}>
-            <Leaderboard />
-          </ProtectedRoute>
-        }
-      />
+      {/* ── Full-screen pages (no layout shell) ─────────────────────────── */}
+      <Route path="/exam/:examId" element={<ProtectedRoute><ExamRoom /></ProtectedRoute>} />
+      <Route path="/student/results/:examId" element={<ProtectedRoute><StudentResultDetail /></ProtectedRoute>} />
 
-      {/* Admin routes */}
-      <Route
-        path="/admin"
-        element={
-          <ProtectedRoute role="admin">
-            <AdminLayout />
-          </ProtectedRoute>
-        }
-      >
+      {/* Leaderboard — accessible by both students and admins */}
+      {/* URL shape: /leaderboard?type=exam&examId=xxx&batchId=xxx  */}
+      {/*            /leaderboard?type=batch&batchId=xxx            */}
+      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+
+      {/* Student Layout */}
+      <Route path="/student" element={<ProtectedRoute><StudentLayout /></ProtectedRoute>}>
+        <Route index element={<StudentDashboard />} />
+        <Route path="exams" element={<StudentExams />} />
+        <Route path="performance" element={<StudentPerformance />} />
+        <Route path="profile" element={<StudentProfile />} />
+      </Route>
+
+      {/* Admin Layout */}
+      <Route path="/admin" element={<ProtectedRoute role="admin"><AdminLayout /></ProtectedRoute>}>
         <Route index element={<AdminDashboard />} />
         <Route path="students" element={<AdminStudents />} />
         <Route path="students/:uid" element={<ViewStudent />} />
@@ -80,7 +57,6 @@ const App = () => {
         <Route path="exams" element={<AdminExams />} />
         <Route path="exams/create" element={<AdminCreateExam />} />
         <Route path="exams/:examId/edit" element={<AdminCreateExam />} />
-        {/* ── New submission routes ── */}
         <Route path="exams/:examId/submissions" element={<ExamSubmissions />} />
         <Route path="exams/:examId/submissions/:submissionId" element={<SubmissionView />} />
         <Route path="results" element={<AdminResults />} />
