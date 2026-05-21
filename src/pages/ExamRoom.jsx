@@ -17,10 +17,10 @@ import SuccessDialog from "../components/exam/SuccessDialog";
 import MobileDrawer from "../components/exam/MobileDrawer";
 import Button from "../components/ui/Button";
 
-// 👇 import your Firestore listener — adjust path to match your project
 import { onSnapshot, doc } from "firebase/firestore";
 import { db } from "../firebase";
 
+// ─── Wrapper ──────────────────────────────────────────────────────────────────
 const ExamRoom = () => (
   <ExamProvider>
     <ExamRoomContent />
@@ -37,10 +37,6 @@ async function retryAsync(fn, maxAttempts = 3, baseDelayMs = 2000) {
       lastError = err;
       if (attempt < maxAttempts) {
         const delay = Math.min(baseDelayMs * 2 ** (attempt - 1), 10_000);
-        console.warn(
-          `[GoogleForm] Attempt ${attempt}/${maxAttempts} failed — retrying in ${delay / 1000}s:`,
-          err.message
-        );
         await new Promise((res) => setTimeout(res, delay));
       }
     }
@@ -48,6 +44,19 @@ async function retryAsync(fn, maxAttempts = 3, baseDelayMs = 2000) {
   throw lastError;
 }
 
+// ─── Full-screen spinner (replaces skeleton) ──────────────────────────────────
+function LoadingSpinner() {
+  return (
+    <div className="flex h-[100dvh] items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-3">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-border border-t-accent" />
+        <p className="text-sm text-text-muted font-medium">Loading exam…</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Content ─────────────────────────────────────────────────────────────
 function ExamRoomContent() {
   const navigate = useNavigate();
   const { examId } = useParams();
@@ -73,57 +82,42 @@ function ExamRoomContent() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
-
-  // ── Tracks live isResultPublished from Firestore after submission ──
   const [isResultPublished, setIsResultPublished] = useState(false);
 
   const submittingRef = useRef(false);
-
   const timeLeftRef = useRef(timeLeft);
-  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
-
   const answersRef = useRef(answers);
+
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
   useEffect(() => { answersRef.current = answers; }, [answers]);
 
-  const currentIndex = exam?.questions?.findIndex((q) => q.id === currentQuestionId) ?? 0;
+  const questions = exam?.questions || [];
+  const totalQuestions = questions.length;
+  const currentIndex = questions.findIndex((q) => q.id === currentQuestionId);
+  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+  const isFirst = safeIndex === 0;
+  const isLast = safeIndex === totalQuestions - 1;
+  const answeredCount = questions.filter((q) => answers[q.id]).length;
 
+  // ── Mark visited ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (currentQuestionId) markVisited(currentQuestionId);
   }, [currentQuestionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Live-poll isResultPublished ONLY after submission ────────────────────────
-  // Starts a Firestore onSnapshot listener once submitResult is set.
-  // Stops automatically when the dialog is dismissed or component unmounts.
+  // ── Live result-published listener ────────────────────────────────────────
   useEffect(() => {
-    // Only start listening after exam is submitted
     if (!submitResult || !examId) return;
+    if (exam?.isResultPublished) { setIsResultPublished(true); return; }
 
-    // Check initial value from exam object first (might already be true)
-    if (exam?.isResultPublished) {
-      setIsResultPublished(true);
-      return; // No need to subscribe
-    }
-
-    // Subscribe to live updates on the exam doc
     const unsub = onSnapshot(
       doc(db, "exams", examId),
-      (snap) => {
-        if (snap.exists()) {
-          const published = snap.data()?.isResultPublished ?? false;
-          setIsResultPublished(published);
-        }
-      },
-      (err) => {
-        // Non-fatal — button just won't appear
-        console.warn("[Results] onSnapshot error:", err.message);
-      }
+      (snap) => { if (snap.exists()) setIsResultPublished(snap.data()?.isResultPublished ?? false); },
+      (err) => console.warn("[Results] onSnapshot error:", err.message)
     );
-
-    // Cleanup when component unmounts or submitResult clears
     return () => unsub();
   }, [submitResult, examId, exam?.isResultPublished]);
 
-  // ── Submit handler ────────────────────────────────────────────────────────────
+  // ── Submit ────────────────────────────────────────────────────────────────
   const handleConfirmedSubmit = useCallback(async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -148,40 +142,27 @@ function ExamRoomContent() {
       });
 
       clearExamStorage();
-
       setSubmitResult(result);
       setSubmitting(false);
 
-      // ── Mirror to Google Form — background, non-blocking ─────────────────
+      // Google Form mirror (non-fatal)
       if (exam.googleForm?.linked && exam.googleForm?.token) {
         const gformKey = `exam_${exam.id}_${currentUser.uid}_gformDone`;
-
-        if (localStorage.getItem(gformKey)) {
-          //console.log("[GoogleForm] Already submitted — skipping.");
-        } else {
+        if (!localStorage.getItem(gformKey)) {
           retryAsync(
-            () =>
-              submitToGoogleForm({
-                token: exam.googleForm.token,
-                studentName: userProfile.name || "",
-                studentEmail: userProfile.email || currentUser.email || "",
-                answers: answersRef.current,
-                questions: exam.questions,
-                timedOut: isExpired,
-              }),
+            () => submitToGoogleForm({
+              token: exam.googleForm.token,
+              studentName: userProfile.name || "",
+              studentEmail: userProfile.email || currentUser.email || "",
+              answers: answersRef.current,
+              questions: exam.questions,
+              timedOut: isExpired,
+            }),
             3,
             2000
           )
-            .then(() => {
-              localStorage.setItem(gformKey, "1");
-              //console.log("[GoogleForm] Submitted and marked done.");
-            })
-            .catch((err) =>
-              console.warn(
-                "Google Form submit failed after all retries (non-fatal):",
-                err.message
-              )
-            );
+            .then(() => localStorage.setItem(gformKey, "1"))
+            .catch((err) => console.warn("Google Form submit failed:", err.message));
         }
       }
     } catch (err) {
@@ -191,39 +172,28 @@ function ExamRoomContent() {
     }
   }, [exam, durationSeconds, isExpired, currentUser, userProfile, clearExamStorage]);
 
-  // ─── Auto-submit on timer expiry ─────────────────────────────────────────────
+  // ── Auto-submit on expiry ─────────────────────────────────────────────────
   useEffect(() => {
     if (isExpired) handleConfirmedSubmit();
   }, [isExpired, handleConfirmedSubmit]);
 
-  // ─── Navigation ───────────────────────────────────────────────────────────────
-  const handlePrev = () => {
-    if (currentIndex > 0) setCurrentQuestionId(exam.questions[currentIndex - 1].id);
-  };
+  // ── Navigation ────────────────────────────────────────────────────────────
+  const goPrev = () => { if (!isFirst) setCurrentQuestionId(questions[safeIndex - 1].id); };
+  const goNext = () => { if (!isLast) setCurrentQuestionId(questions[safeIndex + 1].id); };
 
-  const handleNext = () => {
-    if (currentIndex < exam.questions.length - 1)
-      setCurrentQuestionId(exam.questions[currentIndex + 1].id);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-          <p className="text-sm text-text-muted">Loading exam...</p>
-        </div>
-      </div>
-    );
-  }
+  // ── Guards ────────────────────────────────────────────────────────────────
+  if (loading || !exam) return <LoadingSpinner />;
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="w-full max-w-md rounded-3xl border border-border bg-surface p-8 text-center">
-          <h2 className="text-xl font-bold text-primary">Cannot Enter Exam</h2>
-          <p className="mt-2 text-sm text-text-muted">{error}</p>
-          <Button variant="accent" className="mt-6 w-full" onClick={() => navigate("/dashboard")}>
+      <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
+        <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 sm:p-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-danger-bg">
+            <span className="text-2xl">⚠️</span>
+          </div>
+          <h2 className="text-lg font-bold text-primary">Cannot Enter Exam</h2>
+          <p className="mt-2 text-sm text-text-muted leading-relaxed">{error}</p>
+          <Button variant="accent" className="mt-6 w-full" onClick={() => navigate("/student")}>
             Back to Dashboard
           </Button>
         </div>
@@ -231,91 +201,181 @@ function ExamRoomContent() {
     );
   }
 
-  if (!exam) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-      </div>
-    );
-  }
-
   const showOverlay = submitting || submitResult !== null;
-  const answeredCount = exam.questions.filter((q) => answers[q.id]).length;
-  const isLastQuestion = currentIndex === exam.questions.length - 1;
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background text-text-dark">
-      <ExamTopBar
-        title={exam.title}
-        formattedTime={formattedTime}
-        timeLeft={timeLeft}
-        onHamburgerClick={() => setMapOpen(true)}
-      />
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-text-dark">
 
-      <div className="hidden md:block shrink-0 border-b border-border bg-surface">
+      {/* ── Top Bar ── */}
+      <div className="shrink-0">
+        <ExamTopBar
+          title={exam.title}
+          formattedTime={formattedTime}
+          timeLeft={timeLeft}
+          onHamburgerClick={() => setMapOpen(true)}
+        />
+      </div>
+
+      {/* ── Section Tabs ── */}
+      <div className="shrink-0 border-b border-border bg-surface overflow-x-auto scrollbar-none">
         <SectionTabs />
       </div>
 
+      {/* ── Main Area ── */}
       <div className="flex flex-1 overflow-hidden">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex-1 overflow-y-auto px-3 py-3 md:px-6 md:py-5">
-            <div className="mx-auto max-w-5xl space-y-4">
-              <QuestionCard />
-              <div className="rounded-3xl border border-border bg-surface p-4 md:p-6">
-                <OptionSelector />
+
+        {/* ── Question column ── */}
+        <div className="flex min-w-0 flex-1 flex-col min-h-0">
+
+          {/* Scrollable content */}
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-5">
+              <div className="mx-auto max-w-3xl space-y-3">
+
+                {/* Question */}
+                <QuestionCard />
+
+                {/* Options */}
+                <div className="rounded-xl sm:rounded-2xl border border-border bg-surface px-4 py-4 sm:px-5 sm:py-5">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-faint">
+                    Select answer
+                  </p>
+                  <OptionSelector />
+                </div>
+
+                {/* Bottom spacer */}
+                {/* <div className="h-1" /> */}
+
+                {/* Nav */}
+                <div className="border-t border-border bg-surface rounded-xl md:hidden">
+                  <div className="px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
+                    <div className="mx-auto max-w-3xl flex items-center gap-2 sm:gap-3">
+                      <button disabled={isFirst} onClick={goPrev} className="flex-1 sm:flex-none sm:w-28 h-10 sm:h-11 px-3 sm:px-5 rounded-xl border border-border bg-surface text-text-dark text-xs sm:text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-background transition-colors cursor-pointer">
+                        ← Prev
+                      </button>
+                      <div className="flex-1 flex flex-col items-center justify-center">
+                        <p className="text-[11px] sm:text-xs text-text-faint font-medium tabular-nums">{safeIndex + 1} / {totalQuestions}</p>
+                        <div className="mt-1 w-full max-w-[100px] h-1 bg-border rounded-full overflow-hidden">
+                          <div className="h-full bg-accent rounded-full transition-all duration-300" style={{ width: `${((safeIndex + 1) / totalQuestions) * 100}%` }} />
+                        </div>
+                      </div>
+                      {isLast ? (
+                        <button onClick={() => setShowConfirmDialog(true)} className="flex-1 sm:flex-none sm:w-28 h-10 sm:h-11 px-3 sm:px-5 rounded-xl bg-accent text-white text-xs sm:text-sm font-bold hover:opacity-90 active:scale-[0.98] transition cursor-pointer">
+                          Submit
+                        </button>
+                      ) : (
+                        <button onClick={goNext} className="flex-1 sm:flex-none sm:w-28 h-10 sm:h-11 px-3 sm:px-5 rounded-xl border border-border bg-surface text-text-dark text-xs sm:text-sm font-semibold hover:bg-background transition-colors cursor-pointer">
+                          Next →
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="h-1" />
               </div>
             </div>
           </div>
 
-          <div className="shrink-0 border-t border-border bg-surface px-3 py-3 md:px-6">
-            <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
-              <Button
-                variant="outline"
-                size="lg"
-                disabled={currentIndex === 0}
-                onClick={handlePrev}
-                className="w-1/2 md:flex-none"
-              >
-                ← Prev
-              </Button>
-              <Button
-                className="w-1/2 md:flex-none"
-                variant={isLastQuestion ? "primary" : "outline"}
-                size="lg"
-                onClick={() => {
-                  if (isLastQuestion) setShowConfirmDialog(true);
-                  else handleNext();
-                }}
-              >
-                {isLastQuestion ? "Submit Exam" : "Next →"}
-              </Button>
+          {/* ── Bottom Nav Bar ── */}
+          <div className="hidden  md:block shrink-0 border-t border-border bg-surface">
+            <div className="px-3 py-2.5 sm:px-4 sm:py-3 md:px-6">
+              <div className="mx-auto max-w-3xl flex items-center gap-2 sm:gap-3">
+
+                {/* Prev */}
+                <button
+                  disabled={isFirst}
+                  onClick={goPrev}
+                  className="
+                    flex-1 sm:flex-none sm:w-28
+                    h-10 sm:h-11 px-3 sm:px-5 rounded-xl
+                    border  border-blue-500 bg-blue-100 text-text-dark
+                    text-xs sm:text-sm font-semibold
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    hover:bg-blue-200 transition-colors cursor-pointer
+                  "
+                >
+                  ← Prev
+                </button>
+
+                {/* Progress */}
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <p className="text-[11px] sm:text-xs text-text-faint font-medium tabular-nums">
+                    {safeIndex + 1} / {totalQuestions}
+                  </p>
+                  <div className="mt-1 w-full max-w-[100px] h-1 bg-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent rounded-full transition-all duration-300"
+                      style={{ width: `${((safeIndex + 1) / totalQuestions) * 100}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Next / Submit */}
+                {isLast ? (
+                  <button
+                    onClick={() => setShowConfirmDialog(true)}
+                    className="
+                      flex-1 sm:flex-none sm:w-28
+                      h-10 sm:h-11 px-3 sm:px-5 rounded-xl
+                      bg-accent text-white text-xs sm:text-sm font-bold
+                      hover:opacity-90 active:scale-[0.98] transition cursor-pointer
+                    "
+                  >
+                    Submit
+                  </button>
+                ) : (
+                  <button
+                    onClick={goNext}
+                    className="
+                      flex-1 sm:flex-none sm:w-28
+                      h-10 sm:h-11 px-3 sm:px-5 rounded-xl
+                      border border-blue-500 bg-blue-100 text-text-dark
+                      text-xs sm:text-sm font-semibold
+                      hover:bg-background transition-colors cursor-pointer
+                    "
+                  >
+                    Next →
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        <aside className="hidden w-[320px] shrink-0 border-l border-border bg-surface xl:flex xl:flex-col">
-          <div className="min-h-0 flex-1 overflow-y-auto p-5">
+        {/* ── Desktop Sidebar ── */}
+        <aside className="hidden md:flex w-[260px] shrink-0 border-l border-border bg-surface flex-col min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto p-4">
             <QuestionMap />
           </div>
-          <div className="border-t border-border p-5">
-            <Button
-              variant="accent"
-              size="lg"
-              className="w-full"
+          <div className="shrink-0 border-t border-border p-3 space-y-2.5">
+            <button
               onClick={() => setShowConfirmDialog(true)}
+              className="w-full h-11 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 active:scale-[0.98] transition cursor-pointer"
             >
               Submit Exam
-            </Button>
+            </button>
           </div>
         </aside>
       </div>
 
+      {/* ── Overlays ── */}
+
+      {/* Mobile Drawer */}
       {mapOpen && (
-        <MobileDrawer onClose={() => setMapOpen(false)}>
-          <QuestionMap />
-        </MobileDrawer>
+        <MobileDrawer
+          onClose={() => setMapOpen(false)}
+          answeredCount={answeredCount}
+          totalQuestions={totalQuestions}
+          formattedTime={formattedTime}
+          onSubmit={() => {
+            setMapOpen(false);
+            setShowConfirmDialog(true);
+          }}
+        />
       )}
 
+      {/* Confirm Dialog */}
       {showConfirmDialog && (
         <ConfirmDialog
           exam={exam}
@@ -330,12 +390,13 @@ function ExamRoomContent() {
         />
       )}
 
+      {/* Success / Submitting overlay */}
       {showOverlay && (
         <SuccessDialog
           submitting={submitting}
           submitResult={submitResult}
           examId={exam.id}
-          isResultPublished={isResultPublished}  // 👈 live value, not exam snapshot
+          isResultPublished={isResultPublished}
         />
       )}
     </div>

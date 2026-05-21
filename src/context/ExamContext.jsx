@@ -37,7 +37,7 @@ const ExamProvider = ({ children }) => {
   useEffect(() => {
     if (!exam || !currentUser) return;
     localStorage.setItem(keys(examId, currentUser.uid).answers, JSON.stringify(answers));
-  }, [answers, exam, examId, currentUser]); // ✅ add missing deps
+  }, [answers, exam, examId, currentUser]); 
 
   // ─── Persist position ────────────────────────────────────────────────────────
   // Position persistence

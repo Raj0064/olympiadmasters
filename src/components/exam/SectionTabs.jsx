@@ -23,7 +23,7 @@ const SectionTabs = () => {
 
   return (
     // Reduced top padding (pt-2 instead of pt-4) for a smaller footprint
-    <div className="flex items-end gap-1 overflow-x-auto px-4 pt-2 -mb-[1px]">
+    <div className="flex items-end gap-1 overflow-x-auto px-4 pt-2 mb-[1px]">
 
       {exam.sections.map((section) => {
         const isActive = activeSectionId === section.id;

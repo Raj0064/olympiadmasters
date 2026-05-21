@@ -284,9 +284,9 @@ function ExamCard({
         );
       }
       return (
-        <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-50 text-muted border border-border">
+        <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-100 text-muted border border-border">
           <HiOutlineClock className="w-3.5 h-3.5" />
-          Result Pending
+          Result Not Yet Published
         </div>
       );
     }
@@ -330,7 +330,7 @@ function ExamCard({
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-4 pb-2 gap-2">
         <div className="min-w-0">
-          <p className="text-[14px] font-semibold text-dark leading-snug">
+          <p className="text-[18px] font-semibold text-dark leading-snug">
             {exam.title || 'Untitled Exam'}
           </p>
           {exam.description && (
@@ -367,7 +367,7 @@ function ExamCard({
         {/* Duration */}
         <div className="flex items-center gap-2 text-[12px] text-muted">
           <HiOutlineClock className="w-3.5 h-3.5 shrink-0" />
-          <span>{duration > 0 ? `${duration} minutes` : 'Unlimited time'}</span>
+          <span>{duration > 0 ? `${duration} minutes` : 'No time Limit'}</span>
         </div>
 
         {/* Date */}
@@ -382,7 +382,7 @@ function ExamCard({
           ) : start ? (
             <span>Since {formatDate(start, { day: 'numeric', month: 'short', year: 'numeric' })} · No deadline</span>
           ) : (
-            <span>No schedule set · Always available</span>
+            <span>  </span>
           )}
         </div>
 
@@ -403,7 +403,28 @@ function ExamCard({
         )}
 
         {/* Attempted — show score */}
-        {status === 'attempted' && score !== null && (
+        
+        {status === 'attempted' && score !== null && exam.isResultPublished && (
+          <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/50">
+            <div className="flex items-center gap-1.5 text-[12px]">
+              <HiOutlineTrophy className="w-3.5 h-3.5 text-green-500" />
+              <span className="font-semibold text-dark">
+                {score}/{subTotalMarks}
+                <span className="text-faint font-normal ml-1">marks</span>
+              </span>
+            </div>
+            {pct !== null && (
+              <Badge
+                variant={
+                  pct >= 75 ? 'success' : pct >= 40 ? 'warning' : 'danger'
+                }
+              >
+                {pct}%
+              </Badge>
+            )}
+          </div>
+        )}
+         {status === 'attempted' && score !== null && exam.isResultPublished && (
           <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/50">
             <div className="flex items-center gap-1.5 text-[12px]">
               <HiOutlineTrophy className="w-3.5 h-3.5 text-green-500" />

@@ -22,7 +22,18 @@ import {
   formatDate,
 } from '../../utils/safeHelpers';
 
-// ─── Skeleton UI shown while data loads ───────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getGreeting(hour) {
+  if (hour < 5) return 'Good night';
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  if (hour < 21) return 'Good evening';
+  return 'Good night';
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
@@ -49,12 +60,10 @@ function DashboardSkeleton() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {Array.from({ length: 2 }).map((_, i) => (
           <Card key={i}>
-            {/* Card header */}
             <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
               <Skeleton className="h-4 w-32 rounded" />
               <Skeleton className="h-3 w-14 rounded" />
             </div>
-            {/* Rows */}
             <ul className="divide-y divide-border">
               {Array.from({ length: 3 }).map((_, j) => (
                 <li key={j} className="flex items-center justify-between px-4 py-3 gap-3">
@@ -73,7 +82,8 @@ function DashboardSkeleton() {
   );
 }
 
-// ─── Main Component ────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export default function StudentDashboard() {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
@@ -99,9 +109,7 @@ export default function StudentDashboard() {
 
         const studentGrade = String(userProfile.grade || '');
         const gradeExams = studentGrade
-          ? (allExams || []).filter(
-            (e) => e && String(e.grade) === studentGrade
-          )
+          ? (allExams || []).filter((e) => e && String(e.grade) === studentGrade)
           : allExams || [];
 
         setExams(gradeExams);
@@ -115,15 +123,13 @@ export default function StudentDashboard() {
     }
 
     load();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUser?.uid, userProfile?.grade]);
+    return () => { cancelled = true; };
+  }, [currentUser?.uid, userProfile]);
 
-  // ── Loading state ────────────────────────────────────────────────────────────
+  // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return <DashboardSkeleton />;
 
-  // ── Error state ──────────────────────────────────────────────────────────────
+  // ── Error ─────────────────────────────────────────────────────────────────
   if (error) {
     return (
       <div className="space-y-5">
@@ -133,14 +139,11 @@ export default function StudentDashboard() {
     );
   }
 
-  // ── Derived values ───────────────────────────────────────────────────────────
+  // ── Derived values ────────────────────────────────────────────────────────
   const now = new Date();
   const name = userProfile?.name?.split(' ')[0] || 'Student';
   const grade = userProfile?.grade || '—';
-
-  const hour = now.getHours();
-  const greeting =
-    hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const greeting = getGreeting(now.getHours());
 
   // Submitted exam lookup
   const submittedMap = {};
@@ -182,16 +185,14 @@ export default function StudentDashboard() {
   const submissionCount = submissions.length;
 
   const totalMarksEarned = submissions.reduce(
-    (s, sub) => s + safeNum(sub?.score),
-    0
+    (s, sub) => s + safeNum(sub?.score), 0
   );
   const totalMarksPossible = submissions.reduce(
-    (s, sub) => s + safeNum(sub?.totalMarks),
-    0
+    (s, sub) => s + safeNum(sub?.totalMarks), 0
   );
 
   const bestSub =
-    submissionCount > 0
+    submissionCount > 3
       ? [...submissions]
         .filter((s) => s?.id)
         .sort((a, b) => safeNum(b?.percentage) - safeNum(a?.percentage))[0]
@@ -221,10 +222,9 @@ export default function StudentDashboard() {
     },
     {
       label: 'Total Marks',
-      value:
-        totalMarksPossible > 0
-          ? `${totalMarksEarned}/${totalMarksPossible}`
-          : '—',
+      value: totalMarksPossible > 0
+        ? `${totalMarksEarned}/${totalMarksPossible}`
+        : '—',
       icon: HiOutlineChartBar,
       color: 'text-amber-600',
       bg: 'bg-amber-50',
@@ -247,10 +247,11 @@ export default function StudentDashboard() {
     submissionCount === 0 &&
     inProgressExams.length === 0;
 
-  // ── Render ───────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Greeting */}
+
+      {/* ── Greeting ── */}
       <div>
         <h2 className="text-xl font-semibold text-dark">
           {greeting}, {name} 👋
@@ -264,6 +265,7 @@ export default function StudentDashboard() {
         <EmptyState message="No exams assigned yet. Check back soon!" />
       ) : (
         <>
+
           {/* ── Stats ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {stats.map(({ label, value, icon: Icon, color, bg }) => (
@@ -304,9 +306,7 @@ export default function StudentDashboard() {
                     </p>
                     <p className="text-[11px] text-orange-600 mt-0.5">
                       Timer is still running
-                      {exam.duration
-                        ? ` · ${safeNum(exam.duration)} min total`
-                        : ''}
+                      {exam.duration ? ` · ${safeNum(exam.duration)} min total` : ''}
                     </p>
                   </div>
                   <button
@@ -345,6 +345,7 @@ export default function StudentDashboard() {
 
           {/* ── Two-column cards ── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
             {/* Available Exams */}
             <Card>
               <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
@@ -372,8 +373,11 @@ export default function StudentDashboard() {
                     return (
                       <li
                         key={exam.id}
-                        onClick={() => navigate(`/exam/${exam.id}`)}
-                        className="flex items-center justify-between px-4 py-3 gap-3 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                        onClick={() => !deadlinePassed && navigate(`/exam/${exam.id}`)}
+                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${deadlinePassed
+                            ? 'cursor-not-allowed opacity-60'
+                            : 'hover:bg-slate-50/50 cursor-pointer'
+                          }`}
                       >
                         <div className="min-w-0">
                           <p className="text-[13px] font-medium text-dark truncate">
@@ -381,20 +385,16 @@ export default function StudentDashboard() {
                           </p>
                           <p className="text-[11px] text-muted mt-0.5">
                             {safeNum(exam.totalQuestions)} Qs
-                            {exam.totalMarks
-                              ? ` · ${safeNum(exam.totalMarks)} marks`
-                              : ''}
-                            {exam.duration
-                              ? ` · ${safeNum(exam.duration)} min`
-                              : ''}
+                            {exam.totalMarks ? ` · ${safeNum(exam.totalMarks)} marks` : ''}
+                            {exam.duration ? ` · ${safeNum(exam.duration)} min` : ''}
                             {deadlinePassed && (
-                              <span className="text-amber-500 ml-1">
-                                · Deadline passed
-                              </span>
+                              <span className="text-amber-500 ml-1">· Deadline passed</span>
                             )}
                           </p>
                         </div>
-                        <Badge variant="info">Available</Badge>
+                        <Badge variant={deadlinePassed ? 'warning' : 'info'}>
+                          {deadlinePassed ? 'Expired' : 'Available'}
+                        </Badge>
                       </li>
                     );
                   })}
@@ -430,14 +430,18 @@ export default function StudentDashboard() {
                     const pct = safeNum(sub.percentage);
                     const score = safeNum(sub.score);
                     const totalMarks = safeNum(sub.totalMarks);
+                    const isPublished = exam?.isResultPublished ?? false;
 
                     return (
                       <li
                         key={sub.id}
                         onClick={() =>
-                          navigate(`/student/results/${sub.examId}`)
+                          isPublished && navigate(`/student/results/${sub.examId}`)
                         }
-                        className="flex items-center justify-between px-4 py-3 gap-3 hover:bg-slate-50/50 cursor-pointer transition-colors"
+                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${isPublished
+                            ? 'hover:bg-slate-50/50 cursor-pointer'
+                            : 'cursor-default'
+                          }`}
                       >
                         <div className="min-w-0">
                           <p className="text-[13px] font-medium text-dark truncate">
@@ -450,21 +454,27 @@ export default function StudentDashboard() {
                             })}
                           </p>
                         </div>
+
+                        {/* Score or Pending */}
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[13px] font-semibold text-dark">
-                            {score}/{totalMarks}
-                          </span>
-                          <Badge
-                            variant={
-                              pct >= 75
-                                ? 'success'
-                                : pct >= 40
-                                  ? 'warning'
-                                  : 'danger'
-                            }
-                          >
-                            {pct}%
-                          </Badge>
+                          {isPublished ? (
+                            <>
+                              <span className="text-[13px] font-semibold text-dark">
+                                {score}/{totalMarks}
+                              </span>
+                              <Badge
+                                variant={
+                                  pct >= 75 ? 'success'
+                                    : pct >= 40 ? 'warning'
+                                      : 'danger'
+                                }
+                              >
+                                {pct}%
+                              </Badge>
+                            </>
+                          ) : (
+                            <Badge variant="warning">Results Pending</Badge>
+                          )}
                         </div>
                       </li>
                     );
@@ -481,8 +491,7 @@ export default function StudentDashboard() {
                 <HiOutlineTrophy className="w-5 h-5 text-green-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-green-700">
-                    Best: {safeNum(bestSub.score)}/{safeNum(bestSub.totalMarks)}{' '}
-                    marks
+                    Best: {safeNum(bestSub.score)}/{safeNum(bestSub.totalMarks)} marks
                     <span className="text-green-600/70 font-normal ml-1">
                       ({safeNum(bestSub.percentage)}%)
                     </span>
@@ -528,9 +537,7 @@ export default function StudentDashboard() {
                           {exam.title || 'Untitled Exam'}
                         </p>
                         <p className="text-[11px] text-muted mt-0.5">
-                          {exam.totalMarks
-                            ? `${safeNum(exam.totalMarks)} marks · `
-                            : ''}
+                          {exam.totalMarks ? `${safeNum(exam.totalMarks)} marks · ` : ''}
                           Starts{' '}
                           {formatDate(start, {
                             day: 'numeric',
@@ -546,6 +553,7 @@ export default function StudentDashboard() {
               </ul>
             </Card>
           )}
+
         </>
       )}
     </div>

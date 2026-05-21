@@ -74,7 +74,7 @@ const SuccessDialog = ({ submitting, submitResult, examId, isResultPublished }) 
             {/* Buttons */}
             <div className="flex gap-3 w-full">
               <button
-                onClick={() => navigate('/dashboard')}
+                onClick={() => navigate('/student')}
                 className={`py-3 rounded-xl border-2 border-gray-200 text-primary font-bold text-sm hover:border-primary transition cursor-pointer ${isResultPublished ? 'flex-1' : 'w-full'
                   }`}
               >
