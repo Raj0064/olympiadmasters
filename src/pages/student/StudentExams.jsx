@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExams } from '../../services/exam.service';
+import { getExam, getExams } from '../../services/exam.service';
 import { fetchStudentSubmissions } from '../../services/submission.service';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -17,6 +17,7 @@ import {
   HiOutlineTrophy,
 } from 'react-icons/hi2';
 import { safeNum, safeDate, formatDate } from '../../utils/safeHelpers';
+import { getBatch } from '../../services/batch.service';
 
 // ── Status Logic ──────────────────────────────────────────
 
@@ -58,20 +59,34 @@ export default function StudentExams() {
 
     async function load() {
       try {
-        const [allExams, allSubs] = await Promise.all([
-          getExams().catch(() => []),
+        const batchId = userProfile.batchId;
+
+        if (!batchId) {
+          setExams([]);
+          setSubmissions([]);
+          return;
+        }
+
+        const [batch, allSubs] = await Promise.all([
+          getBatch(batchId).catch(() => null),
           fetchStudentSubmissions(currentUser.uid).catch(() => []),
         ]);
 
         if (cancelled) return;
 
-        const studentGrade = String(userProfile.grade || '');
-        const gradeExams = studentGrade
-          ? (allExams || []).filter((e) => e && String(e.grade) === studentGrade)
-          : allExams || [];
+        if (!batch || !batch.examIds?.length) {
+          setExams([]);
+          setSubmissions(allSubs || []);
+          return;
+        }
 
-        setExams(gradeExams);
+        const batchExams = await Promise.all(
+          batch.examIds.map(id => getExam(id).catch(() => null))
+        );
+
+        setExams(batchExams.filter(Boolean));
         setSubmissions(allSubs || []);
+
       } catch (err) {
         console.error('Exams load error:', err);
         if (!cancelled) setError('Failed to load exams');
@@ -82,7 +97,7 @@ export default function StudentExams() {
 
     load();
     return () => { cancelled = true; };
-  }, [currentUser?.uid, userProfile?.grade]);
+  }, [currentUser?.uid, userProfile?.batchId]); // 👈 also update dependency
 
   // ── Skeleton ──
   if (loading) return <ExamsSkeleton />;
@@ -404,26 +419,6 @@ function ExamCard({
 
         {/* Attempted — show score */}
         
-        {status === 'attempted' && score !== null && exam.isResultPublished && (
-          <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/50">
-            <div className="flex items-center gap-1.5 text-[12px]">
-              <HiOutlineTrophy className="w-3.5 h-3.5 text-green-500" />
-              <span className="font-semibold text-dark">
-                {score}/{subTotalMarks}
-                <span className="text-faint font-normal ml-1">marks</span>
-              </span>
-            </div>
-            {pct !== null && (
-              <Badge
-                variant={
-                  pct >= 75 ? 'success' : pct >= 40 ? 'warning' : 'danger'
-                }
-              >
-                {pct}%
-              </Badge>
-            )}
-          </div>
-        )}
          {status === 'attempted' && score !== null && exam.isResultPublished && (
           <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/50">
             <div className="flex items-center gap-1.5 text-[12px]">

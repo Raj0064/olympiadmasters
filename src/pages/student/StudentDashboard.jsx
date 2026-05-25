@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExams } from '../../services/exam.service';
+import { getExam, getExams } from '../../services/exam.service';
 import { fetchStudentSubmissions } from '../../services/submission.service';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -21,6 +21,7 @@ import {
   safeDate,
   formatDate,
 } from '../../utils/safeHelpers';
+import { getBatch } from '../../services/batch.service';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ function getGreeting(hour) {
   if (hour < 12) return 'Good morning';
   if (hour < 17) return 'Good afternoon';
   if (hour < 21) return 'Good evening';
-  return 'Good night';
+  return 'Welcome back';
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -100,20 +101,39 @@ export default function StudentDashboard() {
 
     async function load() {
       try {
-        const [allExams, allSubs] = await Promise.all([
-          getExams().catch(() => []),
+        const batchId = userProfile.batchId;
+
+        // If no batch assigned, show nothing
+        if (!batchId) {
+          setExams([]);
+          setSubmissions([]);
+          return;
+        }
+
+        const [batch, allSubs] = await Promise.all([
+          getBatch(batchId).catch(() => null),
           fetchStudentSubmissions(currentUser.uid).catch(() => []),
         ]);
 
         if (cancelled) return;
 
-        const studentGrade = String(userProfile.grade || '');
-        const gradeExams = studentGrade
-          ? (allExams || []).filter((e) => e && String(e.grade) === studentGrade)
-          : allExams || [];
+        // No batch found or no exams in batch
+        if (!batch || !batch.examIds?.length) {
+          setExams([]);
+          setSubmissions(allSubs || []);
+          return;
+        }
 
-        setExams(gradeExams);
+        // Fetch only exams assigned to this batch
+        const batchExams = await Promise.all(
+          batch.examIds.map(id => getExam(id).catch(() => null))
+        );
+
+        const validExams = batchExams.filter(Boolean); // remove nulls
+
+        setExams(validExams);
         setSubmissions(allSubs || []);
+
       } catch (err) {
         console.error('Dashboard load error:', err);
         if (!cancelled) setError('Failed to load dashboard data');
@@ -254,7 +274,7 @@ export default function StudentDashboard() {
       {/* ── Greeting ── */}
       <div>
         <h2 className="text-xl font-semibold text-dark">
-          {greeting}, {name} 👋
+          {greeting} {name},
         </h2>
         <p className="text-sm text-muted mt-0.5">
           Grade {grade} · Olympiad Maths

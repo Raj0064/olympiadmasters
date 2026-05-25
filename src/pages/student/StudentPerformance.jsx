@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExams } from '../../services/exam.service';
+import { getExam, getExams } from '../../services/exam.service';
 import { fetchStudentSubmissions } from '../../services/submission.service';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -27,6 +27,7 @@ import {
   safeRound,
   formatDate,
 } from '../../utils/safeHelpers';
+import { getBatch } from '../../services/batch.service';
 
 // ── Main Component ────────────────────────────────────────
 
@@ -54,23 +55,37 @@ export default function StudentPerformance() {
 
     async function load() {
       try {
-        const [allExams, allSubs] = await Promise.all([
-          getExams().catch(() => []),
+        const batchId = userProfile.batchId;
+
+        if (!batchId) {
+          setExams([]);
+          setSubmissions([]);
+          return;
+        }
+
+        const [batch, allSubs] = await Promise.all([
+          getBatch(batchId).catch(() => null),
           fetchStudentSubmissions(currentUser.uid).catch(() => []),
         ]);
 
         if (cancelled) return;
 
-        const studentGrade = String(userProfile.grade || '');
-        const gradeExams = studentGrade
-          ? (allExams || []).filter((e) => e && String(e.grade) === studentGrade)
-          : allExams || [];
+        if (!batch || !batch.examIds?.length) {
+          setExams([]);
+          setSubmissions(allSubs || []);
+          return;
+        }
 
-        setExams(gradeExams);
+        const batchExams = await Promise.all(
+          batch.examIds.map(id => getExam(id).catch(() => null))
+        );
+
+        setExams(batchExams.filter(Boolean));
         setSubmissions(allSubs || []);
+
       } catch (err) {
-        console.error('Performance load error:', err);
-        if (!cancelled) setError('Failed to load performance data');
+        console.error('Exams load error:', err);
+        if (!cancelled) setError('Failed to load exams');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,7 +93,7 @@ export default function StudentPerformance() {
 
     load();
     return () => { cancelled = true; };
-  }, [currentUser?.uid, userProfile?.grade]);
+  }, [currentUser?.uid, userProfile?.batchId]); // 👈 also update dependency
 
   if (loading) return <PerformanceSkeleton />;
 

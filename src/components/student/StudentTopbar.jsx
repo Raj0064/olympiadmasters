@@ -50,7 +50,7 @@ export default function StudentTopBar({ title }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 bg-surface border-b border-border px-4 lg:px-6">
+    <header className="lg:hidden sticky top-0 z-30 bg-surface border-b border-border px-4 lg:px-6">
       <div className="flex items-center justify-between h-14">
         <h1 className="text-[15px] font-semibold text-dark">{title}</h1>
 
