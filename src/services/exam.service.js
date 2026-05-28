@@ -13,6 +13,7 @@ import {
   writeBatch,
   query,
   where,
+  documentId,
   orderBy,
   serverTimestamp,
 } from "firebase/firestore";
@@ -56,6 +57,27 @@ function sortQuestions(questions, sections) {
     return (a.order ?? 0) - (b.order ?? 0);
   });
 }
+
+export async function getExamsByIds(examIds) {
+  if (!examIds?.length) return [];
+
+  // Firestore `in` operator supports max 30 values — chunk if needed
+  const chunks = [];
+  for (let i = 0; i < examIds.length; i += 30) {
+    chunks.push(examIds.slice(i, i + 30));
+  }
+
+  const results = await Promise.all(
+    chunks.map((chunk) =>
+      getDocs(query(collection(db, "exams"), where(documentId(), "in", chunk)))
+    )
+  );
+
+  return results.flatMap((snap) =>
+    snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+  );
+}
+ 
 
 // ─── Create Exam + Questions ──────────────────────────────────────────────────
 export async function createExam(examData, sections) {

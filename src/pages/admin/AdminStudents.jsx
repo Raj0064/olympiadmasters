@@ -3,6 +3,7 @@ import { getStudents, createStudent, deleteStudent } from '../../services/studen
 import { getBatches } from '../../services/batch.service';
 import { useNavigate } from 'react-router-dom';
 import { BulkImportStudentsButton } from '../../components/admin/create_exam/BulkStudentImport';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const GRADES = ['4', '5', '6', '7', '8'];
 
@@ -186,7 +187,7 @@ export default function AdminStudents() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
@@ -216,15 +217,22 @@ export default function AdminStudents() {
   );
 
   // ── Delete ──────────────────────────────────────────────────────────────────
-  async function handleDelete(uid) {
-    if (confirmDeleteId !== uid) { setConfirmDeleteId(uid); return; }
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
     setDeleting(true);
+
     try {
-      await deleteStudent(uid);
-      setStudents((p) => p.filter((s) => s.id !== uid));
-      setConfirmDeleteId(null);
+      await deleteStudent(deleteTarget.id);
+
+      setStudents((prev) =>
+        prev.filter((s) => s.id !== deleteTarget.id)
+      );
+
+      setDeleteTarget(null);
     } catch (e) {
-      setError('Failed to remove student.');
+      console.error(e);
+      setError(e.message || 'Failed to remove student.');
     } finally {
       setDeleting(false);
     }
@@ -298,7 +306,7 @@ export default function AdminStudents() {
               </thead>
               <tbody className="divide-y divide-black/6">
                 {filtered.map((s) => (
-                  <tr key={s.id} onClick={() => setConfirmDeleteId(null)}>
+                  <tr key={s.id} >
                     <td className="py-2.5 font-medium text-text-dark">{s.name}</td>
                     <td className="py-2.5 text-text-dark/55">{s.email}</td>
                     <td className="py-2.5">
@@ -321,23 +329,13 @@ export default function AdminStudents() {
                           View
                         </button>
                         <button
-                          onClick={() => handleDelete(s.id)}
-                          disabled={deleting && confirmDeleteId === s.id}
-                          className={`text-[12px] transition-colors disabled:opacity-50 ${confirmDeleteId === s.id
-                              ? 'text-red-600 font-semibold'
-                              : 'text-red-400 hover:text-red-600'
-                            }`}
+                          onClick={() => setDeleteTarget(s)}
+                          className="text-[12px] text-red-400 hover:text-red-600 transition-colors"
                         >
-                          {confirmDeleteId === s.id ? 'Sure?' : 'Remove'}
+                          Remove
                         </button>
-                        {confirmDeleteId === s.id && (
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="text-[12px] text-text-dark/35 hover:text-text-dark transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        )}
+                          
+                    
                       </div>
                     </td>
                   </tr>
@@ -353,6 +351,25 @@ export default function AdminStudents() {
             </table>
           </div>
         )}
+
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title="Remove Student?"
+          description={
+            <>
+              Student{' '}
+              <span className="font-semibold text-text-dark">
+                {deleteTarget?.name}
+              </span>{' '}
+              will be permanently removed.
+            </>
+          }
+          confirmLabel={deleting ? 'Removing…' : 'Remove'}
+          confirmVariant="danger"
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       </div>
     </div>
   );

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExam, getExams } from '../../services/exam.service';
-import { fetchStudentSubmissions } from '../../services/submission.service';
+import { useStudentData } from '../../context/StudentdataContext'; // ✅ NEW
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Skeleton from '../../components/ui/Skeleton';
@@ -16,12 +15,7 @@ import {
   HiOutlinePlayCircle,
   HiOutlineTrophy,
 } from 'react-icons/hi2';
-import {
-  safeNum,
-  safeDate,
-  formatDate,
-} from '../../utils/safeHelpers';
-import { getBatch } from '../../services/batch.service';
+import { safeNum, safeDate, formatDate } from '../../utils/safeHelpers';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -38,13 +32,10 @@ function getGreeting(hour) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-6">
-      {/* Greeting */}
       <div className="space-y-1.5">
         <Skeleton className="h-6 w-48 rounded-lg" />
         <Skeleton className="h-4 w-32 rounded-lg" />
       </div>
-
-      {/* Stats grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i} className="flex items-center gap-3 p-4">
@@ -56,8 +47,6 @@ function DashboardSkeleton() {
           </Card>
         ))}
       </div>
-
-      {/* Two-column cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {Array.from({ length: 2 }).map((_, i) => (
           <Card key={i}>
@@ -89,62 +78,8 @@ export default function StudentDashboard() {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
 
-  const [exams, setExams] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    if (!currentUser?.uid || !userProfile) return;
-
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const batchId = userProfile.batchId;
-
-        // If no batch assigned, show nothing
-        if (!batchId) {
-          setExams([]);
-          setSubmissions([]);
-          return;
-        }
-
-        const [batch, allSubs] = await Promise.all([
-          getBatch(batchId).catch(() => null),
-          fetchStudentSubmissions(currentUser.uid).catch(() => []),
-        ]);
-
-        if (cancelled) return;
-
-        // No batch found or no exams in batch
-        if (!batch || !batch.examIds?.length) {
-          setExams([]);
-          setSubmissions(allSubs || []);
-          return;
-        }
-
-        // Fetch only exams assigned to this batch
-        const batchExams = await Promise.all(
-          batch.examIds.map(id => getExam(id).catch(() => null))
-        );
-
-        const validExams = batchExams.filter(Boolean); // remove nulls
-
-        setExams(validExams);
-        setSubmissions(allSubs || []);
-
-      } catch (err) {
-        console.error('Dashboard load error:', err);
-        if (!cancelled) setError('Failed to load dashboard data');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [currentUser?.uid, userProfile]);
+  // ✅ Data now comes from shared context — no fetch on every mount
+  const { exams, submissions, loading, error } = useStudentData();
 
   // ── Loading ───────────────────────────────────────────────────────────────
   if (loading) return <DashboardSkeleton />;
@@ -165,13 +100,9 @@ export default function StudentDashboard() {
   const grade = userProfile?.grade || '—';
   const greeting = getGreeting(now.getHours());
 
-  // Submitted exam lookup
   const submittedMap = {};
-  submissions.forEach((s) => {
-    if (s?.examId) submittedMap[s.examId] = true;
-  });
+  submissions.forEach((s) => { if (s?.examId) submittedMap[s.examId] = true; });
 
-  // Categorise exams
   const inProgressExams = [];
   const availableExams = [];
   const upcomingExams = [];
@@ -180,36 +111,21 @@ export default function StudentDashboard() {
     if (!exam?.id || !exam.isActive) return;
 
     const start = safeDate(exam.scheduledAt);
-    if (start && now < start) {
-      upcomingExams.push(exam);
-      return;
-    }
-
+    if (start && now < start) { upcomingExams.push(exam); return; }
     if (submittedMap[exam.id]) return;
 
     let hasLocalData = false;
-    try {
-      hasLocalData = !!localStorage.getItem(
-        `exam_${exam.id}_${currentUser.uid}_answers`
-      );
-    } catch {
-      hasLocalData = false;
-    }
+    try { hasLocalData = !!localStorage.getItem(`exam_${exam.id}_${currentUser.uid}_answers`); }
+    catch { hasLocalData = false; }
 
     if (hasLocalData) inProgressExams.push(exam);
     else availableExams.push(exam);
   });
 
-  // Stats
   const activeExamCount = exams.filter((e) => e?.isActive).length;
   const submissionCount = submissions.length;
-
-  const totalMarksEarned = submissions.reduce(
-    (s, sub) => s + safeNum(sub?.score), 0
-  );
-  const totalMarksPossible = submissions.reduce(
-    (s, sub) => s + safeNum(sub?.totalMarks), 0
-  );
+  const totalMarksEarned = submissions.reduce((s, sub) => s + safeNum(sub?.score), 0);
+  const totalMarksPossible = submissions.reduce((s, sub) => s + safeNum(sub?.totalMarks), 0);
 
   const bestSub =
     submissionCount > 3
@@ -219,35 +135,13 @@ export default function StudentDashboard() {
       : null;
 
   const stats = [
-    {
-      label: 'Total Exams',
-      value: activeExamCount,
-      icon: HiOutlineClipboardDocumentList,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
-    },
-    {
-      label: 'Attempted',
-      value: submissionCount,
-      icon: HiOutlineCheckCircle,
-      color: 'text-green-600',
-      bg: 'bg-green-50',
-    },
-    {
-      label: 'Available',
-      value: availableExams.length + inProgressExams.length,
-      icon: HiOutlineClock,
-      color: 'text-indigo-600',
-      bg: 'bg-indigo-50',
-    },
+    { label: 'Total Exams', value: activeExamCount, icon: HiOutlineClipboardDocumentList, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Attempted', value: submissionCount, icon: HiOutlineCheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Available', value: availableExams.length + inProgressExams.length, icon: HiOutlineClock, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     {
       label: 'Total Marks',
-      value: totalMarksPossible > 0
-        ? `${totalMarksEarned}/${totalMarksPossible}`
-        : '—',
-      icon: HiOutlineChartBar,
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
+      value: totalMarksPossible > 0 ? `${totalMarksEarned}/${totalMarksPossible}` : '—',
+      icon: HiOutlineChartBar, color: 'text-amber-600', bg: 'bg-amber-50',
     },
   ];
 
@@ -263,9 +157,7 @@ export default function StudentDashboard() {
     .slice(0, 3);
 
   const hasNoData =
-    activeExamCount === 0 &&
-    submissionCount === 0 &&
-    inProgressExams.length === 0;
+    activeExamCount === 0 && submissionCount === 0 && inProgressExams.length === 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -273,19 +165,14 @@ export default function StudentDashboard() {
 
       {/* ── Greeting ── */}
       <div>
-        <h2 className="text-xl font-semibold text-dark">
-          {greeting} {name},
-        </h2>
-        <p className="text-sm text-muted mt-0.5">
-          Grade {grade} · Olympiad Maths
-        </p>
+        <h2 className="text-xl font-semibold text-dark">{greeting} {name},</h2>
+        <p className="text-sm text-muted mt-0.5">Grade {grade} · Olympiad Maths</p>
       </div>
 
       {hasNoData ? (
         <EmptyState message="No exams assigned yet. Check back soon!" />
       ) : (
         <>
-
           {/* ── Stats ── */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {stats.map(({ label, value, icon: Icon, color, bg }) => (
@@ -310,31 +197,25 @@ export default function StudentDashboard() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-orange-500" />
                 </span>
                 <p className="text-sm font-semibold text-orange-700">
-                  {inProgressExams.length} exam
-                  {inProgressExams.length !== 1 ? 's' : ''} in progress
+                  {inProgressExams.length} exam{inProgressExams.length !== 1 ? 's' : ''} in progress
                 </p>
               </div>
-
               {inProgressExams.map((exam) => (
                 <div
                   key={exam.id}
                   className="flex items-center justify-between bg-white rounded-lg px-3 py-2.5 border border-orange-100"
                 >
                   <div className="min-w-0">
-                    <p className="text-[13px] font-medium text-dark truncate">
-                      {exam.title || 'Untitled Exam'}
-                    </p>
+                    <p className="text-[13px] font-medium text-dark truncate">{exam.title || 'Untitled Exam'}</p>
                     <p className="text-[11px] text-orange-600 mt-0.5">
-                      Timer is still running
-                      {exam.duration ? ` · ${safeNum(exam.duration)} min total` : ''}
+                      Timer is still running{exam.duration ? ` · ${safeNum(exam.duration)} min total` : ''}
                     </p>
                   </div>
                   <button
                     onClick={() => navigate(`/exam/${exam.id}`)}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer shrink-0"
                   >
-                    <HiOutlinePlayCircle className="w-4 h-4" />
-                    Resume
+                    <HiOutlinePlayCircle className="w-4 h-4" /> Resume
                   </button>
                 </div>
               ))}
@@ -350,8 +231,7 @@ export default function StudentDashboard() {
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500" />
                 </span>
                 <p className="text-sm font-medium text-blue-700">
-                  {availableExams.length} exam
-                  {availableExams.length !== 1 ? 's' : ''} available
+                  {availableExams.length} exam{availableExams.length !== 1 ? 's' : ''} available
                 </p>
               </div>
               <button
@@ -369,9 +249,7 @@ export default function StudentDashboard() {
             {/* Available Exams */}
             <Card>
               <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
-                <p className="text-[13.5px] font-semibold text-dark">
-                  Available Exams
-                </p>
+                <p className="text-[13.5px] font-semibold text-dark">Available Exams</p>
                 <button
                   onClick={() => navigate('/student/exams')}
                   className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer"
@@ -379,37 +257,27 @@ export default function StudentDashboard() {
                   View all <HiOutlineArrowRight className="w-3 h-3" />
                 </button>
               </div>
-
               {availableExams.length === 0 ? (
-                <div className="px-4 py-6">
-                  <EmptyState message="All exams attempted!" />
-                </div>
+                <div className="px-4 py-6"><EmptyState message="All exams attempted!" /></div>
               ) : (
                 <ul className="divide-y divide-border">
                   {availableExams.slice(0, 3).map((exam) => {
                     const windowEnd = safeDate(exam.windowEnd);
                     const deadlinePassed = windowEnd && now > windowEnd;
-
                     return (
                       <li
                         key={exam.id}
                         onClick={() => !deadlinePassed && navigate(`/exam/${exam.id}`)}
-                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${deadlinePassed
-                            ? 'cursor-not-allowed opacity-60'
-                            : 'hover:bg-slate-50/50 cursor-pointer'
+                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${deadlinePassed ? 'cursor-not-allowed opacity-60' : 'hover:bg-slate-50/50 cursor-pointer'
                           }`}
                       >
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-dark truncate">
-                            {exam.title || 'Untitled Exam'}
-                          </p>
+                          <p className="text-[13px] font-medium text-dark truncate">{exam.title || 'Untitled Exam'}</p>
                           <p className="text-[11px] text-muted mt-0.5">
                             {safeNum(exam.totalQuestions)} Qs
                             {exam.totalMarks ? ` · ${safeNum(exam.totalMarks)} marks` : ''}
                             {exam.duration ? ` · ${safeNum(exam.duration)} min` : ''}
-                            {deadlinePassed && (
-                              <span className="text-amber-500 ml-1">· Deadline passed</span>
-                            )}
+                            {deadlinePassed && <span className="text-amber-500 ml-1">· Deadline passed</span>}
                           </p>
                         </div>
                         <Badge variant={deadlinePassed ? 'warning' : 'info'}>
@@ -425,9 +293,7 @@ export default function StudentDashboard() {
             {/* Recent Results */}
             <Card>
               <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-border">
-                <p className="text-[13.5px] font-semibold text-dark">
-                  Recent Results
-                </p>
+                <p className="text-[13.5px] font-semibold text-dark">Recent Results</p>
                 <button
                   onClick={() => navigate('/student/performance?tab=results')}
                   className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer"
@@ -435,62 +301,36 @@ export default function StudentDashboard() {
                   View all <HiOutlineArrowRight className="w-3 h-3" />
                 </button>
               </div>
-
               {recentSubs.length === 0 ? (
-                <div className="px-4 py-6">
-                  <EmptyState message="No exams attempted yet" />
-                </div>
+                <div className="px-4 py-6"><EmptyState message="No exams attempted yet" /></div>
               ) : (
                 <ul className="divide-y divide-border">
                   {recentSubs.map((sub) => {
                     if (!sub) return null;
-
                     const exam = exams.find((e) => e?.id === sub.examId);
                     const submitted = safeDate(sub.submittedAt);
                     const pct = safeNum(sub.percentage);
                     const score = safeNum(sub.score);
                     const totalMarks = safeNum(sub.totalMarks);
                     const isPublished = exam?.isResultPublished ?? false;
-
                     return (
                       <li
                         key={sub.id}
-                        onClick={() =>
-                          isPublished && navigate(`/student/results/${sub.examId}`)
-                        }
-                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${isPublished
-                            ? 'hover:bg-slate-50/50 cursor-pointer'
-                            : 'cursor-default'
+                        onClick={() => isPublished && navigate(`/student/results/${sub.examId}`)}
+                        className={`flex items-center justify-between px-4 py-3 gap-3 transition-colors ${isPublished ? 'hover:bg-slate-50/50 cursor-pointer' : 'cursor-default'
                           }`}
                       >
                         <div className="min-w-0">
-                          <p className="text-[13px] font-medium text-dark truncate">
-                            {exam?.title || 'Exam'}
-                          </p>
+                          <p className="text-[13px] font-medium text-dark truncate">{exam?.title || 'Exam'}</p>
                           <p className="text-[11px] text-muted mt-0.5">
-                            {formatDate(submitted, {
-                              day: 'numeric',
-                              month: 'short',
-                            })}
+                            {formatDate(submitted, { day: 'numeric', month: 'short' })}
                           </p>
                         </div>
-
-                        {/* Score or Pending */}
                         <div className="flex items-center gap-2 shrink-0">
                           {isPublished ? (
                             <>
-                              <span className="text-[13px] font-semibold text-dark">
-                                {score}/{totalMarks}
-                              </span>
-                              <Badge
-                                variant={
-                                  pct >= 75 ? 'success'
-                                    : pct >= 40 ? 'warning'
-                                      : 'danger'
-                                }
-                              >
-                                {pct}%
-                              </Badge>
+                              <span className="text-[13px] font-semibold text-dark">{score}/{totalMarks}</span>
+                              <Badge variant={pct >= 75 ? 'success' : pct >= 40 ? 'warning' : 'danger'}>{pct}%</Badge>
                             </>
                           ) : (
                             <Badge variant="warning">Results Pending</Badge>
@@ -512,17 +352,12 @@ export default function StudentDashboard() {
                 <div>
                   <p className="text-sm font-medium text-green-700">
                     Best: {safeNum(bestSub.score)}/{safeNum(bestSub.totalMarks)} marks
-                    <span className="text-green-600/70 font-normal ml-1">
-                      ({safeNum(bestSub.percentage)}%)
-                    </span>
+                    <span className="text-green-600/70 font-normal ml-1">({safeNum(bestSub.percentage)}%)</span>
                   </p>
                   <p className="text-[11px] text-green-600/70 mt-0.5">
-                    {safeNum(bestSub.percentage) >= 90
-                      ? 'Outstanding! Keep it up!'
-                      : safeNum(bestSub.percentage) >= 75
-                        ? 'Great job! Aim higher!'
-                        : safeNum(bestSub.percentage) >= 50
-                          ? 'Good effort! Keep practicing'
+                    {safeNum(bestSub.percentage) >= 90 ? 'Outstanding! Keep it up!'
+                      : safeNum(bestSub.percentage) >= 75 ? 'Great job! Aim higher!'
+                        : safeNum(bestSub.percentage) >= 50 ? 'Good effort! Keep practicing'
                           : 'Every attempt makes you better'}
                   </p>
                 </div>
@@ -540,30 +375,19 @@ export default function StudentDashboard() {
           {upcomingExams.length > 0 && (
             <Card>
               <div className="px-4 pt-4 pb-3 border-b border-border">
-                <p className="text-[13.5px] font-semibold text-dark">
-                  Upcoming
-                </p>
+                <p className="text-[13.5px] font-semibold text-dark">Upcoming</p>
               </div>
               <ul className="divide-y divide-border">
                 {upcomingExams.map((exam) => {
                   const start = safeDate(exam.scheduledAt);
                   return (
-                    <li
-                      key={exam.id}
-                      className="flex items-center justify-between px-4 py-3 gap-3"
-                    >
+                    <li key={exam.id} className="flex items-center justify-between px-4 py-3 gap-3">
                       <div className="min-w-0">
-                        <p className="text-[13px] font-medium text-dark truncate">
-                          {exam.title || 'Untitled Exam'}
-                        </p>
+                        <p className="text-[13px] font-medium text-dark truncate">{exam.title || 'Untitled Exam'}</p>
                         <p className="text-[11px] text-muted mt-0.5">
                           {exam.totalMarks ? `${safeNum(exam.totalMarks)} marks · ` : ''}
                           Starts{' '}
-                          {formatDate(start, {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
+                          {formatDate(start, { day: 'numeric', month: 'short', year: 'numeric' })}
                         </p>
                       </div>
                       <Badge variant="warning">Upcoming</Badge>
@@ -573,7 +397,6 @@ export default function StudentDashboard() {
               </ul>
             </Card>
           )}
-
         </>
       )}
     </div>

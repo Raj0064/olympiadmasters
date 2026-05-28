@@ -6,6 +6,7 @@ import {
   deleteBatch,
 } from '../../services/batch.service';
 import { useNavigate } from 'react-router-dom';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const GRADES = ['4', '5', '6', '7', '8'];
 const CURRENT_YEAR = String(new Date().getFullYear());
@@ -31,6 +32,7 @@ function CreateBatchModal({ onClose, onCreated }) {
       await createBatch(form);
       onCreated();
     } catch (e) {
+      console.error(e);
       setError(e.message || 'Failed to create batch.');
       setSaving(false);
     }
@@ -131,8 +133,8 @@ export default function AdminBatches() {
   const navigate = useNavigate();
 
   // Two-click delete: stores the id pending confirmation
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   const loadBatches = useCallback(async () => {
@@ -158,24 +160,27 @@ export default function AdminBatches() {
   useEffect(() => { loadBatches(); }, [loadBatches]);
 
   // ── Delete ────────────────────────────────────────────────────────────────
-  async function handleDelete(batchId) {
-    // First click → enter confirm state
-    if (confirmDeleteId !== batchId) {
-      setConfirmDeleteId(batchId);
-      return;
-    }
-    // Second click → delete
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+
     setDeleting(true);
+
     try {
-      await deleteBatch(batchId);
-      setBatches((p) => p.filter((b) => b.id !== batchId));
-      setConfirmDeleteId(null);
+      await deleteBatch(deleteTarget.id);
+
+      setBatches((prev) =>
+        prev.filter((b) => b.id !== deleteTarget.id)
+      );
+
+      setDeleteTarget(null);
     } catch (e) {
       setError('Failed to delete batch.');
     } finally {
       setDeleting(false);
     }
   }
+
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -237,7 +242,7 @@ export default function AdminBatches() {
               </thead>
               <tbody className="divide-y divide-black/6">
                 {batches.map((b) => (
-                  <tr key={b.id} onClick={() => setConfirmDeleteId(null)}>
+                  <tr key={b.id}>
                     <td className="py-2.5 font-medium text-text-dark">{b.name}</td>
                     <td className="py-2.5">
                       <span className="text-[11px] bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full">
@@ -260,24 +265,11 @@ export default function AdminBatches() {
 
                         {/* Two-click delete */}
                         <button
-                          onClick={() => handleDelete(b.id)}
-                          disabled={deleting && confirmDeleteId === b.id}
-                          className={`text-[12px] transition-colors disabled:opacity-50 ${confirmDeleteId === b.id
-                              ? 'text-red-600 font-semibold'
-                              : 'text-red-400 hover:text-red-600'
-                            }`}
+                          onClick={() => setDeleteTarget(b)}
+                          className="text-[12px] text-red-400 hover:text-red-600 transition-colors"
                         >
-                          {confirmDeleteId === b.id ? 'Sure?' : 'Delete'}
+                          Delete
                         </button>
-
-                        {confirmDeleteId === b.id && (
-                          <button
-                            onClick={() => setConfirmDeleteId(null)}
-                            className="text-[12px] text-text-dark/35 hover:text-text-dark transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -294,6 +286,25 @@ export default function AdminBatches() {
             </table>
           </div>
         )}
+
+        <ConfirmDialog
+          open={!!deleteTarget}
+          title="Delete Batch?"
+          description={
+            <>
+              Batch{' '}
+              <span className="font-semibold text-text-dark">
+                {deleteTarget?.name}
+              </span>{' '}
+              will be permanently deleted. This cannot be undone.
+            </>
+          }
+          confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+          confirmVariant="danger"
+          loading={deleting}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
       </div>
     </div>
   );

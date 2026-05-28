@@ -4,14 +4,14 @@ import {
   useEffect,
   useState,
   useCallback,
-} from 'react';
-import { auth, db } from '../firebase';
+} from "react";
+import { auth, db } from "../firebase";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
-} from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+} from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 const AuthContext = createContext(null);
 
@@ -20,55 +20,60 @@ export const useAuth = () => useContext(AuthContext);
 export default function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading] = useState(true); // true until first auth check
+  const [loading, setLoading] = useState(true);
+  const [profileError, setProfileError] = useState(false); // ✅ NEW: tracks Firestore fetch failure
 
-  // ── Fetch Firestore profile for a given uid ──────────────────────────────
+  // ── Fetch Firestore profile for a given uid ────────────────────────────
   const fetchProfile = useCallback(async (uid) => {
+    setProfileError(false); // reset before each attempt
     try {
-      const snap = await getDoc(doc(db, 'users', uid));
+      const snap = await getDoc(doc(db, "users", uid));
       setUserProfile(snap.exists() ? snap.data() : null);
     } catch (err) {
-      console.error('Failed to fetch user profile:', err);
+      console.error("Failed to fetch user profile:", err);
       setUserProfile(null);
+      setProfileError(true); // ✅ flag so ProtectedRoute can react
     }
   }, []);
 
-  // ── Auth state listener ──────────────────────────────────────────────────
+  // ── Auth state listener ────────────────────────────────────────────────
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
 
       if (user) {
-        await fetchProfile(user.uid);
+        await fetchProfile(user.uid); // loading stays true during this
       } else {
         setUserProfile(null);
+        setProfileError(false);
       }
 
-      setLoading(false); // always unblock after first event
+      setLoading(false); // unblock AFTER profile is ready (or failed)
     });
 
     return unsubscribe;
   }, [fetchProfile]);
 
-  // ── Auth helpers ─────────────────────────────────────────────────────────
+  // ── Auth helpers ───────────────────────────────────────────────────────
   const login = (email, password) =>
     signInWithEmailAndPassword(auth, email, password);
 
   const logout = () => signOut(auth);
 
-  // Call this after updating Firestore profile to sync local state
+  // Call after updating Firestore profile to sync local state
   const refreshProfile = () => {
     if (currentUser?.uid) return fetchProfile(currentUser.uid);
   };
 
-  // ── Derived helpers ──────────────────────────────────────────────────────
-  const isAdmin = userProfile?.role === 'admin';
-  const isStudent = userProfile?.role === 'student';
+  // ── Derived helpers ────────────────────────────────────────────────────
+  const isAdmin = userProfile?.role === "admin";
+  const isStudent = userProfile?.role === "student";
 
   const value = {
     currentUser,
     userProfile,
     loading,
+    profileError, // ✅ exposed so consumers can handle fetch failures
     login,
     logout,
     refreshProfile,
@@ -76,9 +81,11 @@ export default function AuthProvider({ children }) {
     isStudent,
   };
 
- return (
+  return (
     <AuthContext.Provider value={value}>
-      {!loading ? children : (
+      {!loading ? (
+        children
+      ) : (
         <div className="min-h-screen bg-background flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
             <div className="w-10 h-10 border-4 border-accent border-t-transparent rounded-full animate-spin" />

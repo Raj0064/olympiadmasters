@@ -139,13 +139,13 @@ function ExamRoomContent() {
         answers: answersRef.current,
         questions: exam.questions,
         timeTaken,
+        skipDuplicateCheck: true,   // ✅ ExamContext already verified on load
       });
 
       clearExamStorage();
       setSubmitResult(result);
-      setSubmitting(false);
 
-      // Google Form mirror (non-fatal)
+      // Google Form mirror (non-fatal, already non-blocking — no change needed)
       if (exam.googleForm?.linked && exam.googleForm?.token) {
         const gformKey = `exam_${exam.id}_${currentUser.uid}_gformDone`;
         if (!localStorage.getItem(gformKey)) {
@@ -168,7 +168,8 @@ function ExamRoomContent() {
     } catch (err) {
       console.error("Submission failed:", err.message);
       submittingRef.current = false;
-      setSubmitting(false);
+    } finally {
+      setSubmitting(false);   // ✅ was missing from success path — caused stuck spinner edge case
     }
   }, [exam, durationSeconds, isExpired, currentUser, userProfile, clearExamStorage]);
 

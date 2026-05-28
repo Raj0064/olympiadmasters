@@ -28,6 +28,8 @@ import ViewBatch from "./pages/admin/AdminViewBatch.jsx";
 import ViewStudent from "./pages/admin/AdminViewStudent.jsx";
 import ExamSubmissions from "./pages/admin/AdminExamSubmissions.jsx";
 import SubmissionView from "./pages/admin/AdminSubmissionView.jsx";
+import MentalMaths from "./pages/MentalMaths.jsx";
+import StudentDataProvider from "./context/StudentdataContext.jsx";
 
 const App = () => {
   return (
@@ -36,7 +38,7 @@ const App = () => {
 
         {/* ── Public ───────────────────────────────────────────────── */}
         <Route path="/login" element={<Login />} />
-
+        <Route path="/mentalmaths" element={<MentalMaths />} />
         <Route path="/" element={<Navigate to="/login" replace />} />  {/* ← add this */}
 
         {/* ── Error Pages ──────────────────────────────────────────── */}
@@ -76,7 +78,9 @@ const App = () => {
           path="/student"
           element={
             <ProtectedRoute role="student">
-              <StudentLayout />
+              <StudentDataProvider>
+                <StudentLayout />
+              </StudentDataProvider>
             </ProtectedRoute>
           }
         >

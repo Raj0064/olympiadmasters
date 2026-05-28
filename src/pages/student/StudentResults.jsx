@@ -264,7 +264,6 @@ function ResultCard({ result, onViewDetail }) {
   const timeTaken = safeNum(result.timeTaken);
   const duration = safeNum(result.duration);
   const totalQuestions = correct + wrong + skipped;
-  const timeTakenMin = Math.round(safeNum(result.timeTaken) / 60);
 
   return (
     <Card

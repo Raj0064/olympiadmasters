@@ -1,8 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { getExam, getExams } from '../../services/exam.service';
-import { fetchStudentSubmissions } from '../../services/submission.service';
+import { useStudentData } from '../../context/StudentdataContext'; // ✅ NEW
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
 import Skeleton from '../../components/ui/Skeleton';
@@ -17,7 +16,6 @@ import {
   HiOutlineTrophy,
 } from 'react-icons/hi2';
 import { safeNum, safeDate, formatDate } from '../../utils/safeHelpers';
-import { getBatch } from '../../services/batch.service';
 
 // ── Status Logic ──────────────────────────────────────────
 
@@ -46,58 +44,10 @@ export default function StudentExams() {
   const { currentUser, userProfile } = useAuth();
   const navigate = useNavigate();
 
-  const [exams, setExams] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // ✅ Data from shared context — no re-fetch on tab switch
+  const { exams, submissions, loading, error } = useStudentData();
+
   const [activeTab, setActiveTab] = useState('all');
-
-  useEffect(() => {
-    if (!currentUser?.uid || !userProfile) return;
-
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const batchId = userProfile.batchId;
-
-        if (!batchId) {
-          setExams([]);
-          setSubmissions([]);
-          return;
-        }
-
-        const [batch, allSubs] = await Promise.all([
-          getBatch(batchId).catch(() => null),
-          fetchStudentSubmissions(currentUser.uid).catch(() => []),
-        ]);
-
-        if (cancelled) return;
-
-        if (!batch || !batch.examIds?.length) {
-          setExams([]);
-          setSubmissions(allSubs || []);
-          return;
-        }
-
-        const batchExams = await Promise.all(
-          batch.examIds.map(id => getExam(id).catch(() => null))
-        );
-
-        setExams(batchExams.filter(Boolean));
-        setSubmissions(allSubs || []);
-
-      } catch (err) {
-        console.error('Exams load error:', err);
-        if (!cancelled) setError('Failed to load exams');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, [currentUser?.uid, userProfile?.batchId]); // 👈 also update dependency
 
   // ── Skeleton ──
   if (loading) return <ExamsSkeleton />;
@@ -129,9 +79,7 @@ export default function StudentExams() {
   const inProgressMap = {};
   (exams || []).forEach((e) => {
     if (!e?.id || submittedMap[e.id]) return;
-    if (hasLocalStorage(`exam_${e.id}_${uid}_answers`)) {
-      inProgressMap[e.id] = true;
-    }
+    if (hasLocalStorage(`exam_${e.id}_${uid}_answers`)) inProgressMap[e.id] = true;
   });
 
   // ── Tabs ──
@@ -143,7 +91,6 @@ export default function StudentExams() {
     { key: 'upcoming', label: 'Upcoming' },
   ];
 
-  // ── Tab counts ──
   const tabCounts = {};
   tabs.forEach((t) => {
     tabCounts[t.key] = (exams || []).filter((e) => {
@@ -153,7 +100,6 @@ export default function StudentExams() {
     }).length;
   });
 
-  // ── Filter + Sort ──
   const filtered = (exams || []).filter((exam) => {
     if (!exam?.id) return false;
     const status = getExamStatus(exam, now, submittedMap[exam.id], inProgressMap[exam.id]);
@@ -162,7 +108,6 @@ export default function StudentExams() {
   });
 
   const sortOrder = { inprogress: 0, available: 1, upcoming: 2, attempted: 3, closed: 4 };
-
   const sorted = [...filtered].sort((a, b) => {
     const sa = getExamStatus(a, now, submittedMap[a.id], inProgressMap[a.id]);
     const sb = getExamStatus(b, now, submittedMap[b.id], inProgressMap[b.id]);
@@ -181,9 +126,7 @@ export default function StudentExams() {
     <div className="space-y-5">
       <div>
         <h2 className="text-xl font-semibold text-dark">My Exams</h2>
-        <p className="text-sm text-muted mt-0.5">
-          Grade {grade} · Olympiad Maths
-        </p>
+        <p className="text-sm text-muted mt-0.5">Grade {grade} · Olympiad Maths</p>
       </div>
 
       {/* Tabs */}
@@ -192,16 +135,12 @@ export default function StudentExams() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-3 py-1.5 text-[12.5px] font-medium rounded-md transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab.key
-                ? 'bg-white text-dark shadow-sm'
-                : 'text-muted hover:text-dark'
+            className={`px-3 py-1.5 text-[12.5px] font-medium rounded-md transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${activeTab === tab.key ? 'bg-white text-dark shadow-sm' : 'text-muted hover:text-dark'
               }`}
           >
             {tab.label}
             {tabCounts[tab.key] > 0 && (
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-slate-200 text-slate-500'
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${activeTab === tab.key ? 'bg-blue-100 text-blue-700' : 'bg-slate-200 text-slate-500'
                 }`}>
                 {tabCounts[tab.key]}
               </span>
@@ -219,7 +158,6 @@ export default function StudentExams() {
             const status = getExamStatus(exam, now, submittedMap[exam.id], inProgressMap[exam.id]);
             const deadlinePassed = isDeadlinePassed(exam, now);
             const submission = submissionByExam[exam.id] || null;
-
             return (
               <ExamCard
                 key={exam.id}
@@ -241,15 +179,7 @@ export default function StudentExams() {
 
 // ── Exam Card ─────────────────────────────────────────────
 
-function ExamCard({
-  exam,
-  status,
-  deadlinePassed,
-  submission,
-  onEnter,
-  onResume,
-  onResult,
-}) {
+function ExamCard({ exam, status, deadlinePassed, submission, onEnter, onResume, onResult }) {
   if (!exam) return null;
 
   const statusConfig = {
@@ -261,14 +191,12 @@ function ExamCard({
   };
 
   const config = statusConfig[status] || statusConfig.closed;
-
   const start = safeDate(exam.scheduledAt);
   const end = safeDate(exam.windowEnd);
   const totalQuestions = safeNum(exam.totalQuestions);
   const totalMarks = safeNum(exam.totalMarks);
   const duration = safeNum(exam.duration);
 
-  // Submission data for attempted exams
   const score = submission ? safeNum(submission.score) : null;
   const subTotalMarks = submission ? safeNum(submission.totalMarks) : null;
   const pct = submission ? safeNum(submission.percentage) : null;
@@ -276,83 +204,54 @@ function ExamCard({
   function renderAction() {
     if (status === 'inprogress') {
       return (
-        <button
-          onClick={onResume}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[13px] font-semibold rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer animate-pulse-subtle"
-        >
-          <HiOutlinePlayCircle className="w-4.5 h-4.5" />
-          Resume Exam
+        <button onClick={onResume} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[13px] font-semibold rounded-lg bg-orange-500 text-white hover:bg-orange-600 transition-colors cursor-pointer animate-pulse-subtle">
+          <HiOutlinePlayCircle className="w-4.5 h-4.5" /> Resume Exam
         </button>
       );
     }
-
     if (status === 'attempted') {
       if (exam.isResultPublished) {
         return (
-          <button
-            onClick={onResult}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors cursor-pointer"
-          >
-            <HiOutlineCheckCircle className="w-4 h-4" />
-            View Result
+          <button onClick={onResult} className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors cursor-pointer">
+            <HiOutlineCheckCircle className="w-4 h-4" /> View Result
           </button>
         );
       }
       return (
         <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-100 text-muted border border-border">
-          <HiOutlineClock className="w-3.5 h-3.5" />
-          Result Not Yet Published
+          <HiOutlineClock className="w-3.5 h-3.5" /> Result Not Yet Published
         </div>
       );
     }
-
     if (status === 'available') {
       return (
-        <button
-          onClick={onEnter}
-          className="w-full px-3 py-2.5 text-[13px] font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors cursor-pointer"
-        >
+        <button onClick={onEnter} className="w-full px-3 py-2.5 text-[13px] font-semibold rounded-lg bg-primary text-white hover:bg-primary-hover transition-colors cursor-pointer">
           Start Exam
         </button>
       );
     }
-
     if (status === 'upcoming') {
       return (
         <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-50 text-muted border border-border">
-          <HiOutlineLockClosed className="w-3.5 h-3.5" />
-          Not Started Yet
+          <HiOutlineLockClosed className="w-3.5 h-3.5" /> Not Started Yet
         </div>
       );
     }
-
     if (status === 'closed') {
       return (
-        <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-50 text-muted border border-border">
-          Closed
-        </div>
+        <div className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-lg bg-slate-50 text-muted border border-border">Closed</div>
       );
     }
-
     return null;
   }
 
   return (
-    <Card
-      className={`flex flex-col border-l-4 ${config.border} transition-shadow hover:shadow-md ${status === 'inprogress' ? 'ring-1 ring-orange-200 bg-orange-50/30' : ''
-        }`}
-    >
+    <Card className={`flex flex-col border-l-4 ${config.border} transition-shadow hover:shadow-md ${status === 'inprogress' ? 'ring-1 ring-orange-200 bg-orange-50/30' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between px-4 pt-4 pb-2 gap-2">
         <div className="min-w-0">
-          <p className="text-[18px] font-semibold text-dark leading-snug">
-            {exam.title || 'Untitled Exam'}
-          </p>
-          {exam.description && (
-            <p className="text-[12px] text-muted mt-0.5 line-clamp-1">
-              {exam.description}
-            </p>
-          )}
+          <p className="text-[18px] font-semibold text-dark leading-snug">{exam.title || 'Untitled Exam'}</p>
+          {exam.description && <p className="text-[12px] text-muted mt-0.5 line-clamp-1">{exam.description}</p>}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {status === 'inprogress' && (
@@ -367,7 +266,6 @@ function ExamCard({
 
       {/* Meta */}
       <div className="px-4 py-2 space-y-1.5 flex-1">
-        {/* Questions + Marks */}
         {(totalQuestions > 0 || totalMarks > 0) && (
           <div className="flex items-center gap-2 text-[12px] text-muted">
             <HiOutlineClipboardDocumentList className="w-3.5 h-3.5 shrink-0" />
@@ -378,81 +276,49 @@ function ExamCard({
             </span>
           </div>
         )}
-
-        {/* Duration */}
         <div className="flex items-center gap-2 text-[12px] text-muted">
           <HiOutlineClock className="w-3.5 h-3.5 shrink-0" />
           <span>{duration > 0 ? `${duration} minutes` : 'No time Limit'}</span>
         </div>
-
-        {/* Date */}
         <div className="text-[11.5px] text-faint">
           {status === 'upcoming' && start ? (
             <span>Starts {formatDate(start, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           ) : end && start ? (
-            <span>
-              {formatDate(start, { day: 'numeric', month: 'short' })} —{' '}
-              {formatDate(end, { day: 'numeric', month: 'short', year: 'numeric' })}
-            </span>
+            <span>{formatDate(start, { day: 'numeric', month: 'short' })} — {formatDate(end, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
           ) : start ? (
             <span>Since {formatDate(start, { day: 'numeric', month: 'short', year: 'numeric' })} · No deadline</span>
-          ) : (
-            <span>  </span>
-          )}
+          ) : <span>  </span>}
         </div>
-
-        {/* Deadline warning */}
         {deadlinePassed && status === 'available' && (
           <div className="flex items-center gap-1.5 text-[11.5px] text-amber-600">
-            <HiOutlineExclamationTriangle className="w-3.5 h-3.5" />
-            Deadline passed — still available
+            <HiOutlineExclamationTriangle className="w-3.5 h-3.5" /> Deadline passed — still available
           </div>
         )}
-
-        {/* In progress */}
         {status === 'inprogress' && (
           <div className="flex items-center gap-1.5 text-[11.5px] text-orange-600 font-medium">
-            <HiOutlinePlayCircle className="w-3.5 h-3.5" />
-            Exam in progress — timer running
+            <HiOutlinePlayCircle className="w-3.5 h-3.5" /> Exam in progress — timer running
           </div>
         )}
-
-        {/* Attempted — show score */}
-        
-         {status === 'attempted' && score !== null && exam.isResultPublished && (
+        {status === 'attempted' && score !== null && exam.isResultPublished && (
           <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-border/50">
             <div className="flex items-center gap-1.5 text-[12px]">
               <HiOutlineTrophy className="w-3.5 h-3.5 text-green-500" />
-              <span className="font-semibold text-dark">
-                {score}/{subTotalMarks}
-                <span className="text-faint font-normal ml-1">marks</span>
-              </span>
+              <span className="font-semibold text-dark">{score}/{subTotalMarks}<span className="text-faint font-normal ml-1">marks</span></span>
             </div>
             {pct !== null && (
-              <Badge
-                variant={
-                  pct >= 75 ? 'success' : pct >= 40 ? 'warning' : 'danger'
-                }
-              >
-                {pct}%
-              </Badge>
+              <Badge variant={pct >= 75 ? 'success' : pct >= 40 ? 'warning' : 'danger'}>{pct}%</Badge>
             )}
           </div>
         )}
-
-        {/* Attempted — no score yet */}
         {status === 'attempted' && score === null && (
           <div className="flex items-center gap-1.5 text-[11.5px] text-green-600">
-            <HiOutlineCheckCircle className="w-3.5 h-3.5" />
-            Attempted
+            <HiOutlineCheckCircle className="w-3.5 h-3.5" /> Attempted
           </div>
         )}
       </div>
 
       {/* Action */}
-      <div className="px-4 pb-4 pt-2 border-t border-border mt-2">
-        {renderAction()}
-      </div>
+      <div className="px-4 pb-4 pt-2 border-t border-border mt-2">{renderAction()}</div>
     </Card>
   );
 }
@@ -466,9 +332,7 @@ function ExamsSkeleton() {
         <Skeleton className="h-7 w-32" />
         <Skeleton className="h-4 w-40 mt-1.5" />
       </div>
-
       <Skeleton className="h-9 w-80 rounded-lg" />
-
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {[...Array(6)].map((_, i) => (
           <Card key={i} className="flex flex-col border-l-4 border-l-slate-200">

@@ -78,10 +78,13 @@ export async function submitExam({
   answers,
   questions,
   timeTaken,
+  skipDuplicateCheck = false, // ✅ NEW
 }) {
-  const alreadySubmitted = await checkAlreadySubmitted(userId, examId);
-  if (alreadySubmitted) {
-    throw new Error("You have already submitted this exam.");
+  // ✅ skip the redundant Firestore query when caller already verified
+  if (!skipDuplicateCheck) {
+    const alreadySubmitted = await checkAlreadySubmitted(userId, examId);
+    if (alreadySubmitted)
+      throw new Error("You have already submitted this exam.");
   }
 
   const data = buildSubmissionData({
