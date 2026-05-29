@@ -1,12 +1,15 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   HiOutlineHome,
   HiOutlineClipboardDocumentList,
   HiOutlineChartBar,
   HiOutlineArrowRightOnRectangle,
+  HiOutlineUser,
 } from 'react-icons/hi2';
-import { useAuth } from '../../context/AuthContext';
 import Skeleton from '../../components/ui/Skeleton';
+import { useAuth } from '../../context/AuthContext';
+import { useState, useRef, useEffect } from 'react';
+
 
 const navItems = [
   { label: 'Dashboard', path: '/student', icon: HiOutlineHome, exact: true },
@@ -56,6 +59,26 @@ function StudentSidebarSkeleton() {
 export default function StudentSidebar() {
   const { userProfile, loading, logout } = useAuth(); // ✅ inside component
   const { pathname } = useLocation();
+
+  const navigate = useNavigate();
+
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false);
+      }
+    }
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () =>
+      document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   // Show skeleton while auth resolves OR profile is loading
   if (loading || !userProfile) {
@@ -116,25 +139,155 @@ export default function StudentSidebar() {
       </nav>
 
       {/* User footer */}
-      <div className="px-4 py-4 border-t border-white/10">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-xs font-semibold shrink-0">
+      {/* User footer */}
+      <div
+        ref={menuRef}
+        className="relative px-4 py-4 border-t border-white/10"
+      >
+        <button
+          onClick={() => setShowMenu((prev) => !prev)}
+          className="
+      w-full
+      flex
+      items-center
+      gap-2.5
+      rounded-lg
+      p-1
+      text-left
+      hover:bg-white/5
+      transition-colors
+      cursor-pointer
+    "
+        >
+          <div
+            className="
+        w-8
+        h-8
+        rounded-full
+        bg-accent
+        flex
+        items-center
+        justify-center
+        text-xs
+        font-semibold
+        shrink-0
+      "
+          >
             {initials}
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-medium truncate">{name}</p>
-            <p className="text-[11px] text-blue-200/50 truncate">{email}</p>
-          </div>
-        </div>
 
-        <button
-          onClick={logout}
-          className="mt-3 flex items-center gap-2 text-[12px] text-blue-200/50
-            hover:text-white transition-colors w-full cursor-pointer"
-        >
-          <HiOutlineArrowRightOnRectangle className="w-4 h-4" />
-          Logout
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-medium truncate">
+              {name}
+            </p>
+
+            <p className="text-[11px] text-blue-200/50 truncate">
+              {email}
+            </p>
+          </div>
         </button>
+
+        {showMenu && (
+          <div
+            className="
+        absolute
+        left-4
+        right-4
+        bottom-full
+        mb-2
+        bg-surface
+        border
+        border-border
+        rounded-xl
+        shadow-xl
+        overflow-hidden
+        z-50
+      "
+          >
+            {/* User Info */}
+            <div className="px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className="
+              w-9
+              h-9
+              rounded-full
+              bg-primary
+              text-white
+              flex
+              items-center
+              justify-center
+              text-xs
+              font-semibold
+              shrink-0
+            "
+                >
+                  {initials}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-black truncate">
+                    {name}
+                  </p>
+
+                  <p className="text-[11px] text-slate-800 truncate">
+                    {email}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="py-1">
+              <button
+                onClick={() => {
+                  setShowMenu(false);
+                  navigate('/student/profile');
+                }}
+                className="
+            w-full
+            flex
+            items-center
+            gap-2.5
+            px-4
+            py-2.5
+            text-[13px]
+            text-black
+            hover:bg-slate-50
+            transition-colors
+            cursor-pointer
+          "
+              >
+                <HiOutlineUser className="w-4 h-4 text-muted" />
+                My Profile
+              </button>
+
+              <button
+                onClick={async () => {
+                  setShowMenu(false);
+                  await logout();
+                  navigate('/login');
+                }}
+                className="
+            w-full
+            flex
+            items-center
+            gap-2.5
+            px-4
+            py-2.5
+            text-[13px]
+            text-red-600
+            hover:bg-red-50
+            transition-colors
+            cursor-pointer
+          "
+              >
+                <HiOutlineArrowRightOnRectangle className="w-4 h-4" />
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );
