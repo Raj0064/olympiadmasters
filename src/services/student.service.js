@@ -18,7 +18,11 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   sendPasswordResetEmail,
+  updatePassword,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from "firebase/auth";
+
 import {
   collection,
   doc,
@@ -96,15 +100,7 @@ export async function getStudent(uid) {
 }
 
 // ─── Update ───────────────────────────────────────────────────────────────────
-/**
- * Updates a student's Firestore profile.
- * Only pass fields you want to change.
- *
- * @param {string} uid
- * @param {{ name?, grade?, batchId? }} data
- */
 export async function updateStudent(uid, data) {
-  // Always normalize grade to string if present
   const normalized = {
     ...data,
     ...(data.grade !== undefined && { grade: String(data.grade) }),
@@ -112,26 +108,36 @@ export async function updateStudent(uid, data) {
   await updateDoc(doc(db, "users", uid), normalized);
 }
 
-// ─── Reset Password ───────────────────────────────────────────────────────────
-/**
- * Sends a Firebase password reset email to the student.
- * Uses the primary auth instance (admin is still signed in).
- *
- * @param {string} email
- */
+
 export async function resetStudentPassword(email) {
   await sendPasswordResetEmail(auth, email);
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
-/**
- * Removes a student's Firestore profile.
- * Auth account is not deleted (requires Admin SDK / Cloud Function).
- *
- * @param {string} uid
- */
+
 export async function deleteStudent(uid) {
-  await deleteDoc(doc(db, "users", uid));
+  // await deleteDoc(doc(db, "users", uid));
+  await updateDoc(doc(db, "users", uid), { disabled: true });
+}
+
+//Enable Student
+export async function enableStudent(uid) {
+  await updateDoc(doc(db, "users", uid), { disabled: false });
+}
+
+
+
+export async function changeStudentPassword(
+  currentUser,
+  currentPassword,
+  newPassword
+) {
+  const credential = EmailAuthProvider.credential(
+    currentUser.email,
+    currentPassword
+  );
+  await reauthenticateWithCredential(currentUser, credential); // required by Firebase before sensitive ops
+  await updatePassword(currentUser, newPassword);
 }
 
 // Look up a student by email — used by bulk results import

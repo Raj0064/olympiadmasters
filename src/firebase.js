@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache } from "firebase/firestore"; // ← fixed
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -12,8 +12,11 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const secondaryApp = initializeApp(firebaseConfig, "Secondary"); // ← isolated auth instance
+const secondaryApp = initializeApp(firebaseConfig, "Secondary");
 
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const secondaryAuth = getAuth(secondaryApp); // ← used only for creating users
+export const secondaryAuth = getAuth(secondaryApp);
+
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache(),
+});
