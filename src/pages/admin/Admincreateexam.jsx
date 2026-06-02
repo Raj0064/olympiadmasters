@@ -40,7 +40,7 @@ function StepIndicator({ step }) {
           <div key={n} className="flex items-center">
             <div className="flex items-center gap-2">
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0
-                ${done ? 'bg-answered text-white' : active ? 'bg-primary text-white' : 'bg-black/8 text-text-dark/40'}`}>
+                ${done ? 'bg-slate-600 text-white' : active ? 'bg-primary text-white' : 'bg-black/8 text-text-dark/40'}`}>
                 {done ? '✓' : n}
               </div>
               <span className={`text-sm hidden sm:block ${active ? 'text-text-dark font-medium' : 'text-text-dark/40'}`}>
@@ -48,7 +48,7 @@ function StepIndicator({ step }) {
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div className={`w-8 sm:w-12 h-px mx-2 sm:mx-3 flex-shrink-0 ${done ? 'bg-answered' : 'bg-black/10'}`} />
+              <div className={`w-8 sm:w-12 h-px mx-2 sm:mx-3 flex-shrink-0 ${done ? 'bg-slate-700' : 'bg-black/10'}`} />
             )}
           </div>
         );
@@ -281,7 +281,6 @@ export default function AdminCreateExam() {
             sections={sections}
             setSections={setSections}
             onGFormImport={handleGFormImport}
-
             grade={exam.grade}   // ← ADD THIS
           />
         )}
