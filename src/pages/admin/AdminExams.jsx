@@ -199,6 +199,26 @@ export default function AdminExams() {
 
   return (
     <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b border-border mb-6 sm:mb-8">
+        {[
+          { key: 'exams', label: 'Exams', path: '/admin/exams' },
+          { key: 'topics', label: 'Topics', path: '/admin/topics' },
+        ].map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => navigate(tab.path)}
+            className={[
+              'px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px',
+              tab.key === 'exams'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-text-muted hover:text-text-dark',
+            ].join(' ')}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-3 mb-6 sm:mb-8">
         <div>

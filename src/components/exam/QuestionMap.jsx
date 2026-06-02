@@ -10,6 +10,12 @@ const QuestionMap = () => {
     setCurrentQuestionId,
   } = useContext(ExamContext);
 
+  // Guard: exam not loaded yet
+  if (!exam) return null;
+
+  const questions = exam.questions ?? [];
+  const sections = exam.sections ?? [];
+
   const getStatus = (questionId) => {
     if (questionId === currentQuestionId) return "active";
     if (answers[questionId]) return "answered";
@@ -28,16 +34,16 @@ const QuestionMap = () => {
     return "bg-white text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-gray-600";
   };
 
-  const answeredCount = (exam.questions ?? []).filter((q) => answers[q.id]).length;
+  const answeredCount = questions.filter((q) => answers[q.id]).length;
 
-  const skippedCount = (exam.questions ?? []).filter(
+  const skippedCount = questions.filter(
     (q) =>
       !answers[q.id] &&
       visitedQuestions.has(q.id) &&
       q.id !== currentQuestionId
   ).length;
 
-  const unseenCount = (exam.questions ?? []).length - answeredCount;
+  const unseenCount = questions.length - answeredCount - skippedCount;
 
   return (
     <div className="flex h-full flex-col">
@@ -66,16 +72,16 @@ const QuestionMap = () => {
 
       {/* Grid */}
       <div className="mt-3 flex flex-1 flex-col gap-4 overflow-y-auto">
-        {(exam.sections ?? []).map((section) => {
-          const sectionQuestions = (exam.questions ?? []).filter(
+        {sections.map((section) => {
+          const sectionQuestions = questions.filter(
             (q) => q.sectionId === section.id
           );
           const questionIndex = (q) =>
-            exam.questions.findIndex((eq) => eq.id === q.id) + 1;
+            questions.findIndex((eq) => eq.id === q.id) + 1;
 
           return (
             <div key={section.id} className="flex flex-col gap-2">
-              {exam.sections.length > 1 && (
+              {sections.length > 1 && (
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
                   {section.name}
                 </p>

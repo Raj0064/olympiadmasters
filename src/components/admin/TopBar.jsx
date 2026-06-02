@@ -46,3 +46,5 @@ export default function TopBar({ onMenuClick }) {
     </header>
   );
 }
+
+

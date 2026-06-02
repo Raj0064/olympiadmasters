@@ -28,6 +28,7 @@ const StudentResultDetail = lazy(() => import("./pages/student/StudentResultDeta
 const StudentLayout = lazy(() => import("./components/student/StudentLayout.jsx"));
 const StudentDashboard = lazy(() => import("./pages/student/StudentDashboard.jsx"));
 const StudentExams = lazy(() => import("./pages/student/StudentExams.jsx"));
+const StudentClassPage = lazy(() => import("./pages/student/StudentClassPage.jsx"));
 const StudentPerformance = lazy(() => import("./pages/student/StudentPerformance.jsx"));
 const StudentProfile = lazy(() => import("./pages/student/StudentProfile.jsx"));
 
@@ -37,6 +38,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx"));
 const AdminStudents = lazy(() => import("./pages/admin/AdminStudents.jsx"));
 const AdminBatches = lazy(() => import("./pages/admin/AdminBatches.jsx"));
 const AdminExams = lazy(() => import("./pages/admin/AdminExams.jsx"));
+const AdminTopics = lazy(() => import("./pages/admin/AdminTopics.jsx"));
 const AdminResults = lazy(() => import("./pages/admin/AdminResults.jsx"));
 const AdminCreateExam = lazy(() => import("./pages/admin/Admincreateexam.jsx"));
 const ViewBatch = lazy(() => import("./pages/admin/AdminViewBatch.jsx"));
@@ -132,6 +134,7 @@ const App = () => (
         >
           <Route index element={<StudentDashboard />} />
           <Route path="exams" element={<StudentExams />} />
+          <Route path="classroom" element={<StudentClassPage />} />
           <Route path="performance" element={<StudentPerformance />} />
           <Route path="profile" element={<StudentProfile />} />
         </Route>
@@ -151,11 +154,13 @@ const App = () => (
           <Route path="batches" element={<AdminBatches />} />
           <Route path="batches/:batchId" element={<ViewBatch />} />
           <Route path="exams" element={<AdminExams />} />
+          <Route path="topics" element={<AdminTopics />} />
           <Route path="exams/create" element={<AdminCreateExam />} />
           <Route path="exams/:examId/edit" element={<AdminCreateExam />} />
           <Route path="exams/:examId/submissions" element={<ExamSubmissions />} />
           <Route path="exams/:examId/submissions/:submissionId" element={<SubmissionView />} />
           <Route path="results" element={<AdminResults />} />
+          <Route path="profile" element={<StudentProfile />} />
         </Route>
 
         {/* ── 404 — must be last ────────────────────────────────────── */}

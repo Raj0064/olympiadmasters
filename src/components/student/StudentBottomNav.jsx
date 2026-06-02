@@ -1,15 +1,20 @@
-import { NavLink, useLocation } from 'react-router-dom';
+// Only change: add to navItems array + add the import
+
 import {
   HiOutlineHome,
   HiOutlineClipboardDocumentList,
   HiOutlineChartBar,
+  HiOutlineArrowRightOnRectangle,
   HiOutlineUser,
+  HiOutlineBookOpen,          // ← ADD THIS
 } from 'react-icons/hi2';
+import { NavLink, useLocation } from 'react-router-dom';
 
 const navItems = [
-  { label: 'Home', path: '/student', icon: HiOutlineHome, exact: true },
+  { label: 'Dashboard', path: '/student', icon: HiOutlineHome, exact: true },
   { label: 'Exams', path: '/student/exams', icon: HiOutlineClipboardDocumentList },
-  { label: 'Performance', path: '/student/performance', icon: HiOutlineChartBar }
+  { label: 'Classroom', path: '/student/classroom', icon: HiOutlineBookOpen },  // ← ADD THIS
+  { label: 'Performance', path: '/student/performance', icon: HiOutlineChartBar },
 ];
 
 export default function StudentBottomNav() {

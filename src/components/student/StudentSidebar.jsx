@@ -5,6 +5,7 @@ import {
   HiOutlineChartBar,
   HiOutlineArrowRightOnRectangle,
   HiOutlineUser,
+  HiOutlineBookOpen,
 } from 'react-icons/hi2';
 import Skeleton from '../../components/ui/Skeleton';
 import { useAuth } from '../../context/AuthContext';
@@ -14,6 +15,7 @@ import { useState, useRef, useEffect } from 'react';
 const navItems = [
   { label: 'Dashboard', path: '/student', icon: HiOutlineHome, exact: true },
   { label: 'Exams', path: '/student/exams', icon: HiOutlineClipboardDocumentList },
+  { label: 'Classroom', path: '/student/classroom', icon: HiOutlineBookOpen },  // ← ADD THIS
   { label: 'Performance', path: '/student/performance', icon: HiOutlineChartBar },
 ];
 

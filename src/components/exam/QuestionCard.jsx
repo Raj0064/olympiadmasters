@@ -1,5 +1,6 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { ExamContext } from "../../context/ExamContext";
+import { MdOutlineZoomOutMap } from "react-icons/md";
 
 const SIZE_CLASS = {
   small: "h-28 md:h-36",
@@ -19,8 +20,6 @@ const QuestionCard = () => {
   const questionNumber = exam.questions.findIndex((q) => q.id === currentQuestionId) + 1;
 
   useEffect(() => {
-    setImageLoaded(false);
-    setImageError(false);
     setZoomed(false);
   }, [currentQuestionId]);
 
@@ -38,8 +37,11 @@ const QuestionCard = () => {
           : "split";
 
   function renderText(text) {
-    const match = text?.match(/\n([A-Da-d][.)]\s)/);
-    if (!match) return <span className="font-bold">{text}</span>;
+    // Match either:
+    // - newline + letter + . or ) + space   (e.g., "\nA) ", "\na. ")
+    // - newline + (letter) + space          (e.g., "\n(a) ", "\n(A) ")
+    const match = text?.match(/\n((?:[A-Da-d][.)]|\([A-Da-d]\))\s)/);
+    if (!match) return <span className="font-semibold">{text}</span>;
     const idx = text.indexOf('\n' + match[1]);
     const question = text.slice(0, idx).trim();
     const rest = text.slice(idx).trim();
@@ -50,7 +52,6 @@ const QuestionCard = () => {
       </>
     );
   }
-
   return (
     <>
       <div className="overflow-hidden rounded-2xl border border-border bg-surface">
@@ -71,24 +72,24 @@ const QuestionCard = () => {
           {layoutMode === "image-only" && (
             <QuestionImage
               imageUrl={imageUrl}
-              imageLoaded={imageLoaded}
-              imageError={imageError}
-              setImageLoaded={setImageLoaded}
-              setImageError={setImageError}
+             
+         
+            
+      
               setZoomed={setZoomed}
               heightClass={heightClass}
             />
           )}
 
           {layoutMode === "text-only" && (
-            <p className="whitespace-pre-line text-[16px] md:text-[15px] leading-7 text-text-dark">
+            <p className="whitespace-pre-line text-[16px] md:text-[17px] leading-7 text-text-dark">
                {renderText(currentQuestion.text)}
             </p>
           )}
 
           {layoutMode === "text-top" && (
             <div className="space-y-4">
-              <p className="whitespace-pre-line text-[15px] leading-7 text-text-dark">
+              <p className="whitespace-pre-line text-[17px] leading-7 text-text-dark">
                  {renderText(currentQuestion.text)}
               </p>
               <QuestionImage
@@ -106,7 +107,7 @@ const QuestionCard = () => {
           {layoutMode === "split" && (
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
               <div className="min-w-0 flex-1">
-                <p className="whitespace-pre-line text-[15px] leading-7 text-text-dark">
+                <p className="whitespace-pre-line text-[17px] leading-7 text-text-dark">
                    {renderText(currentQuestion.text)}
                 </p>
               </div>
@@ -151,45 +152,58 @@ const QuestionCard = () => {
   );
 };
 
-function QuestionImage({
-  imageUrl, imageLoaded, imageError,
-  setImageLoaded, setImageError, setZoomed,
-  heightClass, fill = false,
-}) {
-  if (imageError) return null;
+function QuestionImage({ imageUrl, setZoomed, heightClass, fill = false }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const imgRef = useRef(null);
+
+  // Reset when URL changes
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageError(false);
+  }, [imageUrl]);
+
+  // Catch already-cached images (complete before onLoad fires)
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current?.naturalWidth > 0) {
+      setImageLoaded(true);
+    }
+  }, [imageUrl]);
+
+  if (!imageUrl || imageError) return null;
+
+  // ... rest unchanged, remove imageLoaded/imageError/setImageLoaded/setImageError from props
 
   return (
     <div className="relative w-full">
-      {/* Loader */}
       {!imageLoaded && (
         <div className={`${heightClass} flex w-full items-center justify-center rounded-xl bg-background`}>
           <div className="h-7 w-7 animate-spin rounded-full border-[3px] border-border border-t-accent" />
         </div>
       )}
-
-      {/* Image wrapper */}
       <div
         className={`
           group relative overflow-hidden rounded-xl border border-border
-          ${imageLoaded ? "block" : "hidden"}
+          ${imageLoaded ? "inline-block" : "hidden"}
           ${fill ? `${heightClass} w-full` : ""}
         `}
       >
         <img
+          ref={imgRef}          
           src={imageUrl}
           alt="Question"
           onLoad={() => setImageLoaded(true)}
           onError={() => setImageError(true)}
           onClick={() => setZoomed(true)}
           className={`cursor-zoom-in object-contain transition-transform duration-200 group-hover:scale-[1.01]
-            ${fill ? "h-full w-full" : `${heightClass} mx-auto block max-w-full`}`}
+            ${fill ? "h-full w-full" : `${heightClass} block max-w-full`}`}
         />
         <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/5 pointer-events-none" />
         <button
           onClick={() => setZoomed(true)}
           className="absolute bottom-2 right-2 rounded-lg bg-black/60 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100"
         >
-          Zoom ↗
+          <MdOutlineZoomOutMap />
         </button>
       </div>
     </div>

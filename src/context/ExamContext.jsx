@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState, createContext } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { checkExamAccess, getFullExam } from '../services/exam.service';
@@ -11,9 +11,10 @@ export const useExam = () => useContext(ExamContext);
 const keys = (examId, uid) => ({
   answers: `exam_${examId}_${uid}_answers`,
   position: `exam_${examId}_${uid}_position`,
+  visited: `exam_${examId}_${uid}_visited`,   // ← persists visited set
   timeLeft: `exam_${examId}_${uid}_timeLeft`,
-  startedAt: `exam_${examId}_${uid}_startedAt`,  // ← added
-  gformDone: `exam_${examId}_${uid}_gformDone`,  // ← added
+  startedAt: `exam_${examId}_${uid}_startedAt`,
+  gformDone: `exam_${examId}_${uid}_gformDone`,
 });
 
 const ExamProvider = ({ children }) => {
@@ -33,27 +34,36 @@ const ExamProvider = ({ children }) => {
     setVisitedQuestions(prev => new Set([...prev, questionId]));
   }, []);
 
-  // ─── Persist answers ─────────────────────────────────────────────────────────
+  // ─── Persist answers ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!exam || !currentUser) return;
     localStorage.setItem(keys(examId, currentUser.uid).answers, JSON.stringify(answers));
-  }, [answers, exam, examId, currentUser]); 
+  }, [answers, exam, examId, currentUser]);
 
-  // ─── Persist position ────────────────────────────────────────────────────────
-  // Position persistence
+  // ─── Persist position ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!exam || !currentUser || !currentQuestionId) return;
     localStorage.setItem(keys(examId, currentUser.uid).position, currentQuestionId);
-  }, [currentQuestionId, exam, examId, currentUser]); // ✅ add missing deps
+  }, [currentQuestionId, exam, examId, currentUser]);
 
-  // ─── Clear all localStorage keys for this exam ──────────────────────────────
+  // ─── Persist visitedQuestions ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!exam || !currentUser) return;
+    localStorage.setItem(
+      keys(examId, currentUser.uid).visited,
+      JSON.stringify([...visitedQuestions])
+    );
+  }, [visitedQuestions, exam, examId, currentUser]);
+
+  // ─── Clear all localStorage keys for this exam ─────────────────────────────
   const clearExamStorage = useCallback(() => {
     const k = keys(examId, currentUser.uid);
     localStorage.removeItem(k.answers);
     localStorage.removeItem(k.position);
+    localStorage.removeItem(k.visited);
     localStorage.removeItem(k.timeLeft);
-    localStorage.removeItem(k.startedAt);  // ← added — prevents stale timer on re-entry
-    localStorage.removeItem(k.gformDone);  // ← added — reset on re-take
+    localStorage.removeItem(k.startedAt);
+    localStorage.removeItem(k.gformDone);
   }, [examId, currentUser]);
 
   // ─── Fetch Exam on Load ─────────────────────────────────────────────────────
@@ -63,7 +73,6 @@ const ExamProvider = ({ children }) => {
         setLoading(true);
 
         const fullExam = await getFullExam(examId);
-       
 
         const { allowed, reason } = checkExamAccess(fullExam, userProfile);
         if (!allowed) { setError(reason); setLoading(false); return; }
@@ -79,22 +88,17 @@ const ExamProvider = ({ children }) => {
 
         const k = keys(examId, currentUser.uid);
 
-        // ── Evict stale startedAt from a previously-deleted attempt ──────────
-        // If elapsed time already exceeds exam duration, the key is from a prior
-        // attempt. Without this, useTimer reads it → timeLeft = 0 → isExpired = true
-        // → auto-submit fires instantly on the new attempt.
-        // Guard: only runs for timed exams (fullExam.duration > 0).
+        // ── Evict stale startedAt ─────────────────────────────────────────────
         const savedStartedAt = localStorage.getItem(k.startedAt);
         if (savedStartedAt && fullExam.duration) {
           const elapsed = Math.floor((Date.now() - parseInt(savedStartedAt, 10)) / 1000);
           if (elapsed >= fullExam.duration * 60) {
-            localStorage.removeItem(k.startedAt);  // stale — clear it
-            localStorage.removeItem(k.gformDone);  // ← also reset GForm flag on stale re-take
+            localStorage.removeItem(k.startedAt);
+            localStorage.removeItem(k.gformDone);
           }
-          // else: valid mid-exam resume — keep it so timer continues correctly
         }
 
-        // ── Restore answers from localStorage ────────────────────────────────
+        // ── Restore answers ───────────────────────────────────────────────────
         let savedAnswers = null;
         try {
           const raw = localStorage.getItem(k.answers);
@@ -105,15 +109,30 @@ const ExamProvider = ({ children }) => {
         }
         if (savedAnswers) setAnswers(savedAnswers);
 
+        // ── Restore visited questions ─────────────────────────────────────────
+        let savedVisited = new Set();
+        try {
+          const raw = localStorage.getItem(k.visited);
+          if (raw) savedVisited = new Set(JSON.parse(raw));
+        } catch {
+          console.warn("[ExamContext] Corrupted visited data — starting fresh.");
+          localStorage.removeItem(k.visited);
+        }
+
+        // ── Restore position ──────────────────────────────────────────────────
         const savedPosition = localStorage.getItem(k.position);
         const validPosition =
           savedPosition && fullExam.questions.some(q => q.id === savedPosition)
             ? savedPosition
             : fullExam.questions[0].id;
 
+        // Ensure current + first question are always in visited
+        savedVisited.add(validPosition);
+        savedVisited.add(fullExam.questions[0].id);
+
         setExam(fullExam);
         setCurrentQuestionId(validPosition);
-        setVisitedQuestions(new Set([validPosition, fullExam.questions[0].id]));
+        setVisitedQuestions(savedVisited);
 
       } catch (err) {
         setError(err.message);
@@ -123,7 +142,7 @@ const ExamProvider = ({ children }) => {
     };
 
     if (examId && userProfile) loadExam();
-  }, [examId, userProfile]);
+  }, [examId, userProfile]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     exam,

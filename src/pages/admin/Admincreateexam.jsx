@@ -119,6 +119,12 @@ export default function AdminCreateExam() {
               googleFormItemId: q.googleFormItemId || '',
               isNameField: q.isNameField || false,
               isEmailField: q.isEmailField || false,
+
+              // ── NEW ──
+              topicId: q.topicId || '',
+              topicName: q.topicName || '',
+              subtopicId: q.subtopicId || '',
+              subtopicName: q.subtopicName || '',
             })),
         }));
 
@@ -275,6 +281,8 @@ export default function AdminCreateExam() {
             sections={sections}
             setSections={setSections}
             onGFormImport={handleGFormImport}
+
+            grade={exam.grade}   // ← ADD THIS
           />
         )}
 

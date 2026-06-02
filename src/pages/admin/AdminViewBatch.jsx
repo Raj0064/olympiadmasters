@@ -1,4 +1,5 @@
-// ViewBatch.jsx
+// src/pages/admin/ViewBatch.jsx
+
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -15,13 +16,17 @@ import {
   removeStudentFromBatch,
 } from '../../services/batch.service';
 import { getExams } from '../../services/exam.service';
+import BatchContent from '../../components/admin/BatchContent';
 import { MdLeaderboard } from 'react-icons/md';
-
-
+import {
+  HiOutlineUsers,
+  HiOutlineClipboardDocumentList,
+  HiOutlineBookOpen,
+} from 'react-icons/hi2';
 
 const GRADES = ['4', '5', '6', '7', '8'];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────
 function StatusBadge({ exam }) {
   if (!exam) return null;
   if (exam.isResultPublished)
@@ -43,7 +48,7 @@ function StatusBadge({ exam }) {
   );
 }
 
-// ─── Modal: Edit Batch ────────────────────────────────────────────────────────
+// ─── Modal: Edit Batch ────────────────────────────────────
 function EditBatchModal({ batch, onClose, onSaved }) {
   const [form, setForm] = useState({
     name: batch?.name || '',
@@ -86,7 +91,6 @@ function EditBatchModal({ batch, onClose, onSaved }) {
       onClick={(e) => e.stopPropagation()}
     >
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-base font-semibold text-gray-900">Edit Batch</h3>
@@ -102,7 +106,6 @@ function EditBatchModal({ batch, onClose, onSaved }) {
           </button>
         </div>
 
-        {/* Fields */}
         <div className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">
@@ -129,9 +132,7 @@ function EditBatchModal({ batch, onClose, onSaved }) {
               >
                 <option value="">Select</option>
                 {GRADES.map((g) => (
-                  <option key={g} value={g}>
-                    Grade {g}
-                  </option>
+                  <option key={g} value={g}>Grade {g}</option>
                 ))}
               </select>
             </div>
@@ -151,29 +152,19 @@ function EditBatchModal({ batch, onClose, onSaved }) {
 
           {error && (
             <p className="text-xs text-red-500 bg-red-50 border border-red-200
-                          rounded-lg px-3 py-2">
-              {error}
-            </p>
+                          rounded-lg px-3 py-2">{error}</p>
           )}
         </div>
 
-        {/* Footer */}
         <div className="flex items-center justify-end gap-3 mt-6 pt-5
                         border-t border-gray-100">
-          <button
-            onClick={onClose}
+          <button onClick={onClose}
             className="text-sm text-gray-400 hover:text-gray-700 px-4 py-2
-                       transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!valid || saving}
+                       transition-colors">Cancel</button>
+          <button onClick={handleSave} disabled={!valid || saving}
             className="text-sm bg-blue-600 text-white px-5 py-2 rounded-lg
                        hover:bg-blue-700 transition-colors
-                       disabled:opacity-40 disabled:cursor-not-allowed"
-          >
+                       disabled:opacity-40 disabled:cursor-not-allowed">
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -182,7 +173,7 @@ function EditBatchModal({ batch, onClose, onSaved }) {
   );
 }
 
-// ─── Modal: Add Student ───────────────────────────────────────────────────────
+// ─── Modal: Add Student ───────────────────────────────────
 function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
   const [allStudents, setAllStudents] = useState([]);
   const [search, setSearch] = useState('');
@@ -198,19 +189,13 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
       .then((students) => {
         setAllStudents(students.filter((s) => !currentStudentIds.has(s.id)));
       })
-      .catch((e) => {
-        console.error('getStudentsByGrade error:', e);
-        setError('Failed to load students.');
-      })
+      .catch(() => setError('Failed to load students.'))
       .finally(() => setLoading(false));
   }, [batch?.grade, currentStudentIds]);
 
   const filtered = allStudents.filter((s) => {
     const q = search.toLowerCase();
-    return (
-      s.name?.toLowerCase().includes(q) ||
-      s.email?.toLowerCase().includes(q)
-    );
+    return s.name?.toLowerCase().includes(q) || s.email?.toLowerCase().includes(q);
   });
 
   function toggle(id) {
@@ -226,9 +211,7 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
     setSaving(true);
     setError('');
     try {
-      await Promise.all(
-        [...selected].map((uid) => addStudentToBatch(uid, batch.id))
-      );
+      await Promise.all([...selected].map((uid) => addStudentToBatch(uid, batch.id)));
       onAdded();
     } catch (e) {
       setError(e?.message || 'Failed to add students.');
@@ -237,13 +220,9 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center
-                 justify-center z-50 p-4"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center
+                    justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-base font-semibold text-gray-900">Add Students</h3>
@@ -251,27 +230,20 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
               Grade {batch?.grade} students not yet in this batch
             </p>
           </div>
-          <button
-            onClick={onClose}
+          <button onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-full
                        hover:bg-gray-100 text-gray-400 hover:text-gray-700
-                       transition-colors text-xl leading-none"
-          >
-            ×
-          </button>
+                       transition-colors text-xl leading-none">×</button>
         </div>
 
-        {/* Search */}
         <input
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                      outline-none focus:border-blue-400 bg-white
                      placeholder:text-gray-300 mb-3"
           placeholder="Search by name or email…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={search} onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* List */}
         <div className="border border-gray-100 rounded-xl overflow-hidden
                         max-h-64 overflow-y-auto">
           {loading ? (
@@ -282,40 +254,22 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-xs text-gray-300 text-center py-8">
-              {allStudents.length === 0
-                ? 'No unassigned students for this grade'
-                : 'No results'}
+              {allStudents.length === 0 ? 'No unassigned students for this grade' : 'No results'}
             </p>
           ) : (
             <table className="w-full text-sm">
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => toggle(s.id)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
-                  >
+                  <tr key={s.id} onClick={() => toggle(s.id)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors">
                     <td className="px-3 py-2.5 w-8">
-                      <div
-                        className={`w-4 h-4 rounded border flex items-center
-                                    justify-center transition-colors
-                                    ${selected.has(s.id)
-                            ? 'bg-blue-600 border-blue-600'
-                            : 'border-gray-300'}`}
-                      >
+                      <div className={`w-4 h-4 rounded border flex items-center
+                        justify-center transition-colors
+                        ${selected.has(s.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                         {selected.has(s.id) && (
-                          <svg
-                            className="w-2.5 h-2.5 text-white"
-                            fill="none"
-                            viewBox="0 0 10 8"
-                          >
-                            <path
-                              d="M1 4l3 3 5-6"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                            <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5"
+                              strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         )}
                       </div>
@@ -329,40 +283,23 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
           )}
         </div>
 
-        {error && (
-          <p className="text-xs text-red-500 bg-red-50 border border-red-200
-                        rounded-lg px-3 py-2 mt-3">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200
+                      rounded-lg px-3 py-2 mt-3">{error}</p>}
 
-        {/* Footer */}
         <div className="flex items-center justify-between gap-3 mt-5 pt-4
                         border-t border-gray-100">
           <span className="text-xs text-gray-400">
-            {selected.size > 0
-              ? `${selected.size} selected`
-              : 'Select students to add'}
+            {selected.size > 0 ? `${selected.size} selected` : 'Select students to add'}
           </span>
           <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
+            <button onClick={onClose}
               className="text-sm text-gray-400 hover:text-gray-700 px-4 py-2
-                         transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAdd}
-              disabled={!selected.size || saving}
+                         transition-colors">Cancel</button>
+            <button onClick={handleAdd} disabled={!selected.size || saving}
               className="text-sm bg-blue-600 text-white px-5 py-2 rounded-lg
                          hover:bg-blue-700 transition-colors
-                         disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {saving
-                ? 'Adding…'
-                : `Add ${selected.size || ''} Student${selected.size !== 1 ? 's' : ''
-                }`}
+                         disabled:opacity-40 disabled:cursor-not-allowed">
+              {saving ? 'Adding…' : `Add ${selected.size || ''} Student${selected.size !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>
@@ -371,7 +308,7 @@ function AddStudentModal({ batch, currentStudentIds, onClose, onAdded }) {
   );
 }
 
-// ─── Modal: Assign Exam ───────────────────────────────────────────────────────
+// ─── Modal: Assign Exam ───────────────────────────────────
 function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
   const [allExams, setAllExams] = useState([]);
   const [search, setSearch] = useState('');
@@ -387,16 +324,13 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
       .then((exams) => {
         setAllExams(
           exams.filter((e) => {
-            const examGrade = String(e.grade ?? "");
-            const batchGrade = String(batch.grade ?? "");
+            const examGrade = String(e.grade ?? '');
+            const batchGrade = String(batch.grade ?? '');
             return examGrade === batchGrade && !currentExamIds.has(e.id);
           })
         );
       })
-      .catch((e) => {
-        console.error('getExams error:', e);
-        setError('Failed to load exams.');
-      })
+      .catch(() => setError('Failed to load exams.'))
       .finally(() => setLoading(false));
   }, [batch?.grade, currentExamIds]);
 
@@ -417,9 +351,7 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
     setSaving(true);
     setError('');
     try {
-      await Promise.all(
-        [...selected].map((examId) => assignExamToBatch(batch.id, examId))
-      );
+      await Promise.all([...selected].map((examId) => assignExamToBatch(batch.id, examId)));
       onAssigned();
     } catch (e) {
       setError(e?.message || 'Failed to assign exams.');
@@ -428,13 +360,9 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center
-                 justify-center z-50 p-4"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center
+                    justify-center z-50 p-4" onClick={(e) => e.stopPropagation()}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6">
-        {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
             <h3 className="text-base font-semibold text-gray-900">Assign Exams</h3>
@@ -442,27 +370,20 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
               Grade {batch?.grade} exams not yet assigned
             </p>
           </div>
-          <button
-            onClick={onClose}
+          <button onClick={onClose}
             className="w-7 h-7 flex items-center justify-center rounded-full
                        hover:bg-gray-100 text-gray-400 hover:text-gray-700
-                       transition-colors text-xl leading-none"
-          >
-            ×
-          </button>
+                       transition-colors text-xl leading-none">×</button>
         </div>
 
-        {/* Search */}
         <input
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm
                      outline-none focus:border-blue-400 bg-white
                      placeholder:text-gray-300 mb-3"
           placeholder="Search exams…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={search} onChange={(e) => setSearch(e.target.value)}
         />
 
-        {/* List */}
         <div className="border border-gray-100 rounded-xl overflow-hidden
                         max-h-64 overflow-y-auto">
           {loading ? (
@@ -473,48 +394,28 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
             </div>
           ) : filtered.length === 0 ? (
             <p className="text-xs text-gray-300 text-center py-8">
-              {allExams.length === 0
-                ? `No unassigned Grade ${batch?.grade} exams`
-                : 'No results'}
+              {allExams.length === 0 ? `No unassigned Grade ${batch?.grade} exams` : 'No results'}
             </p>
           ) : (
             <table className="w-full text-sm">
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((e) => (
-                  <tr
-                    key={e.id}
-                    onClick={() => toggle(e.id)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
-                  >
+                  <tr key={e.id} onClick={() => toggle(e.id)}
+                    className="cursor-pointer hover:bg-gray-50 transition-colors">
                     <td className="px-3 py-2.5 w-8">
-                      <div
-                        className={`w-4 h-4 rounded border flex items-center
-                                    justify-center transition-colors
-                                    ${selected.has(e.id)
-                            ? 'bg-blue-600 border-blue-600'
-                            : 'border-gray-300'}`}
-                      >
+                      <div className={`w-4 h-4 rounded border flex items-center
+                        justify-center transition-colors
+                        ${selected.has(e.id) ? 'bg-blue-600 border-blue-600' : 'border-gray-300'}`}>
                         {selected.has(e.id) && (
-                          <svg
-                            className="w-2.5 h-2.5 text-white"
-                            fill="none"
-                            viewBox="0 0 10 8"
-                          >
-                            <path
-                              d="M1 4l3 3 5-6"
-                              stroke="currentColor"
-                              strokeWidth="1.5"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
+                          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8">
+                            <path d="M1 4l3 3 5-6" stroke="currentColor" strokeWidth="1.5"
+                              strokeLinecap="round" strokeLinejoin="round" />
                           </svg>
                         )}
                       </div>
                     </td>
                     <td className="py-2.5 font-medium text-gray-900">{e.title}</td>
-                    <td className="py-2.5 pr-3">
-                      <StatusBadge exam={e} />
-                    </td>
+                    <td className="py-2.5 pr-3"><StatusBadge exam={e} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -522,40 +423,23 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
           )}
         </div>
 
-        {error && (
-          <p className="text-xs text-red-500 bg-red-50 border border-red-200
-                        rounded-lg px-3 py-2 mt-3">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-red-500 bg-red-50 border border-red-200
+                      rounded-lg px-3 py-2 mt-3">{error}</p>}
 
-        {/* Footer */}
         <div className="flex items-center justify-between gap-3 mt-5 pt-4
                         border-t border-gray-100">
           <span className="text-xs text-gray-400">
-            {selected.size > 0
-              ? `${selected.size} selected`
-              : 'Select exams to assign'}
+            {selected.size > 0 ? `${selected.size} selected` : 'Select exams to assign'}
           </span>
           <div className="flex items-center gap-3">
-            <button
-              onClick={onClose}
+            <button onClick={onClose}
               className="text-sm text-gray-400 hover:text-gray-700 px-4 py-2
-                         transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAssign}
-              disabled={!selected.size || saving}
+                         transition-colors">Cancel</button>
+            <button onClick={handleAssign} disabled={!selected.size || saving}
               className="text-sm bg-blue-600 text-white px-5 py-2 rounded-lg
                          hover:bg-blue-700 transition-colors
-                         disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {saving
-                ? 'Assigning…'
-                : `Assign ${selected.size || ''} Exam${selected.size !== 1 ? 's' : ''
-                }`}
+                         disabled:opacity-40 disabled:cursor-not-allowed">
+              {saving ? 'Assigning…' : `Assign ${selected.size || ''} Exam${selected.size !== 1 ? 's' : ''}`}
             </button>
           </div>
         </div>
@@ -564,7 +448,7 @@ function AssignExamModal({ batch, currentExamIds, onClose, onAssigned }) {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────
 export default function ViewBatch() {
   const { batchId } = useParams();
   const navigate = useNavigate();
@@ -575,16 +459,25 @@ export default function ViewBatch() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Modal state
-  const [modal, setModal] = useState(null); // 'edit' | 'addStudent' | 'assignExam'
+  // Main tab
+  const [activeTab, setActiveTab] = useState('students');
 
-  // Two-click confirm state
+  // Modal state
+  const [modal, setModal] = useState(null);
+
+  // Confirm states
   const [confirmRemoveStudentId, setConfirmRemoveStudentId] = useState(null);
   const [confirmRemoveExamId, setConfirmRemoveExamId] = useState(null);
   const [confirmDeleteBatch, setConfirmDeleteBatch] = useState(false);
   const [actionPending, setActionPending] = useState(false);
 
-  // ── Load ──────────────────────────────────────────────────────────────────
+  const mainTabs = [
+    { key: 'students', label: 'Students', icon: HiOutlineUsers, count: students.length },
+    { key: 'exams', label: 'Exams', icon: HiOutlineClipboardDocumentList, count: exams.length },
+    { key: 'content', label: 'Content', icon: HiOutlineBookOpen, count: null },
+  ];
+
+  // ── Load ──
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -594,16 +487,13 @@ export default function ViewBatch() {
         getBatchStudents(batchId),
         getBatchExams(batchId),
       ]);
-      if (!batchData) {
-        navigate('/admin/batches');
-        return;
-      }
+      if (!batchData) { navigate('/admin/batches'); return; }
       setBatch(batchData);
       setStudents(studentsData ?? []);
       setExams(examsData ?? []);
     } catch (e) {
       console.error('load error:', e);
-      setError('Failed to load batch. Check your connection and try again.');
+      setError('Failed to load batch.');
     } finally {
       setLoading(false);
     }
@@ -611,14 +501,12 @@ export default function ViewBatch() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Reset confirm states on background click
   function handlePageClick() {
     setConfirmRemoveStudentId(null);
     setConfirmRemoveExamId(null);
     setConfirmDeleteBatch(false);
   }
 
-  // ── Remove Student ────────────────────────────────────────────────────────
   async function handleRemoveStudent(e, studentId) {
     e.stopPropagation();
     if (confirmRemoveStudentId !== studentId) {
@@ -631,14 +519,12 @@ export default function ViewBatch() {
       setStudents((p) => p.filter((s) => s.id !== studentId));
       setConfirmRemoveStudentId(null);
     } catch (err) {
-      console.error('removeStudentFromBatch error:', err);
       setError('Failed to remove student.');
     } finally {
       setActionPending(false);
     }
   }
 
-  // ── Remove Exam ───────────────────────────────────────────────────────────
   async function handleRemoveExam(e, examId) {
     e.stopPropagation();
     if (confirmRemoveExamId !== examId) {
@@ -651,32 +537,26 @@ export default function ViewBatch() {
       setExams((p) => p.filter((ex) => ex.id !== examId));
       setConfirmRemoveExamId(null);
     } catch (err) {
-      console.error('removeExamFromBatch error:', err);
       setError('Failed to remove exam.');
     } finally {
       setActionPending(false);
     }
   }
 
-  // ── Delete Batch ──────────────────────────────────────────────────────────
   async function handleDeleteBatch(e) {
     e.stopPropagation();
-    if (!confirmDeleteBatch) {
-      setConfirmDeleteBatch(true);
-      return;
-    }
+    if (!confirmDeleteBatch) { setConfirmDeleteBatch(true); return; }
     setActionPending(true);
     try {
       await deleteBatch(batchId);
       navigate('/admin/batches');
     } catch (err) {
-      console.error('deleteBatch error:', err);
       setError('Failed to delete batch.');
       setActionPending(false);
     }
   }
 
-  // ── Loading / error states ────────────────────────────────────────────────
+  // ── Loading / error ──
   if (loading) {
     return (
       <div className="py-20 text-center">
@@ -691,13 +571,9 @@ export default function ViewBatch() {
     return (
       <div className="py-20 text-center">
         <p className="text-sm text-red-500 bg-red-50 border border-red-200
-                      rounded-lg px-4 py-3 inline-block">
-          {error}
-        </p>
-        <button
-          onClick={load}
-          className="block mx-auto mt-4 text-sm text-blue-600 hover:underline"
-        >
+                      rounded-lg px-4 py-3 inline-block">{error}</p>
+        <button onClick={load}
+          className="block mx-auto mt-4 text-sm text-blue-600 hover:underline">
           Try again
         </button>
       </div>
@@ -711,65 +587,42 @@ export default function ViewBatch() {
 
   return (
     <div onClick={handlePageClick} className="max-w-4xl mx-auto pb-10">
-
-      {/* ── Modals ── */}
+      {/* Modals */}
       {modal === 'edit' && (
-        <EditBatchModal
-          batch={batch}
-          onClose={() => setModal(null)}
-          onSaved={(updated) => { setBatch(updated); setModal(null); }}
-        />
+        <EditBatchModal batch={batch} onClose={() => setModal(null)}
+          onSaved={(updated) => { setBatch(updated); setModal(null); }} />
       )}
       {modal === 'addStudent' && (
-        <AddStudentModal
-          batch={batch}
-          currentStudentIds={studentIdSet}
-          onClose={() => setModal(null)}
-          onAdded={() => { setModal(null); load(); }}
-        />
+        <AddStudentModal batch={batch} currentStudentIds={studentIdSet}
+          onClose={() => setModal(null)} onAdded={() => { setModal(null); load(); }} />
       )}
       {modal === 'assignExam' && (
-        <AssignExamModal
-          batch={batch}
-          currentExamIds={examIdSet}
-          onClose={() => setModal(null)}
-          onAssigned={() => { setModal(null); load(); }}
-        />
+        <AssignExamModal batch={batch} currentExamIds={examIdSet}
+          onClose={() => setModal(null)} onAssigned={() => { setModal(null); load(); }} />
       )}
 
-      {/* ── Back ── */}
-      <button
-        onClick={() => navigate('/admin/batches')}
+      {/* Back */}
+      <button onClick={() => navigate('/admin/batches')}
         className="flex items-center gap-1.5 text-xs text-gray-400
-                   hover:text-gray-700 transition-colors mb-5"
-      >
+                   hover:text-gray-700 transition-colors mb-5">
         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 16 16">
-          <path
-            d="M10 12L6 8l4-4"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
+          <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         Back to Batches
       </button>
 
-      {/* ── Hero Header ── */}
+      {/* Hero Header */}
       <div className="bg-white border border-gray-100 rounded-xl p-5 mb-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{batch.name}</h2>
             <div className="flex items-center gap-2 mt-2 flex-wrap">
               <span className="text-[11px] bg-blue-50 text-blue-800
-                               px-2 py-0.5 rounded-full">
-                Grade {batch.grade}
-              </span>
+                               px-2 py-0.5 rounded-full">Grade {batch.grade}</span>
               {batch.year && (
                 <span className="text-[11px] bg-gray-100 text-gray-600
-                                 px-2 py-0.5 rounded-full">
-                  {batch.year}
-                </span>
+                                 px-2 py-0.5 rounded-full">{batch.year}</span>
               )}
               <span className="text-[11px] bg-gray-100 text-gray-600
                                px-2 py-0.5 rounded-full">
@@ -782,218 +635,218 @@ export default function ViewBatch() {
             </div>
           </div>
 
-          {/* Batch actions */}
-          <div
-            className="flex items-center gap-2 flex-shrink-0"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button variant="secondary" size="sm" className='text-xs border border-gray-200 text-gray-500
-                         hover:text-gray-900 hover:border-gray-300
-                         px-3.5 py-1.5 rounded-lg transition-colors' onClick={() => { navigate(`/leaderboard?type=batch&batchId=${batchId}` ) }}>
+          <div className="flex items-center gap-2 flex-shrink-0"
+            onClick={(e) => e.stopPropagation()}>
+            <button className="text-xs border border-gray-200 text-gray-500
+                               hover:text-gray-900 hover:border-gray-300
+                               px-3.5 py-1.5 rounded-lg transition-colors"
+              onClick={() => navigate(`/leaderboard?type=batch&batchId=${batchId}`)}>
               <MdLeaderboard />
             </button>
-            <button
-              onClick={() => setModal('edit')}
+            <button onClick={() => setModal('edit')}
               className="text-xs border border-gray-200 text-gray-500
                          hover:text-gray-900 hover:border-gray-300
-                         px-3.5 py-1.5 rounded-lg transition-colors"
-            >
+                         px-3.5 py-1.5 rounded-lg transition-colors">
               Edit Batch
             </button>
-
-            <button
-              onClick={handleDeleteBatch}
-              disabled={actionPending}
+            <button onClick={handleDeleteBatch} disabled={actionPending}
               className={`text-xs px-3.5 py-1.5 rounded-lg transition-colors
-                          disabled:opacity-50
-                          ${confirmDeleteBatch
+                disabled:opacity-50
+                ${confirmDeleteBatch
                   ? 'bg-red-600 text-white hover:bg-red-700'
-                  : 'border border-red-200 text-red-500 hover:border-red-400'
-                }`}
-            >
+                  : 'border border-red-200 text-red-500 hover:border-red-400'}`}>
               {confirmDeleteBatch ? 'Sure? Delete' : 'Delete Batch'}
             </button>
-
             {confirmDeleteBatch && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setConfirmDeleteBatch(false); }}
-                className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
-              >
+              <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteBatch(false); }}
+                className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
                 Cancel
               </button>
             )}
           </div>
         </div>
 
-        {/* Error banner */}
         {error && (
           <p className="text-xs text-red-500 bg-red-50 border border-red-200
-                        rounded-lg px-3 py-2 mt-4">
-            {error}
-          </p>
+                        rounded-lg px-3 py-2 mt-4">{error}</p>
         )}
       </div>
 
-      {/* ── Students Table ── */}
-      <div className="bg-white border border-gray-100 rounded-xl p-4 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-gray-900">
-            Students ({students.length})
-          </p>
-          <button
-            onClick={(e) => { e.stopPropagation(); setModal('addStudent'); }}
-            className="text-xs bg-blue-600 text-white px-3.5 py-2 rounded-lg
-                       hover:bg-blue-700 transition-colors"
-          >
-            + Add Student
-          </button>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-gray-100">
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide w-8">#</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Name</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Email</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {students.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-10 text-center text-sm text-gray-300">
-                    No students yet — add your first one
-                  </td>
-                </tr>
-              ) : (
-                students.map((s, idx) => (
-                  <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-2.5 text-gray-400 text-xs">{idx + 1}</td>
-                    <td className="py-2.5 font-medium text-gray-900">{s.name}</td>
-                    <td className="py-2.5 text-gray-400 text-xs">{s.email || '—'}</td>
-                    <td className="py-2.5">
-                      <div
-                        className="flex items-center gap-3"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={(e) => handleRemoveStudent(e, s.id)}
-                          disabled={actionPending && confirmRemoveStudentId === s.id}
-                          className={`text-[12px] transition-colors disabled:opacity-50
-                                      ${confirmRemoveStudentId === s.id
-                              ? 'text-red-600 font-semibold'
-                              : 'text-red-400 hover:text-red-600'}`}
-                        >
-                          {confirmRemoveStudentId === s.id ? 'Sure?' : 'Remove'}
-                        </button>
-                        {confirmRemoveStudentId === s.id && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setConfirmRemoveStudentId(null);
-                            }}
-                            className="text-[12px] text-gray-400 hover:text-gray-700
-                                       transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
+      {/* ── Main Tabs ── */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl mb-4 w-fit">
+        {mainTabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 text-[12.5px] font-medium rounded-lg transition-all
+                cursor-pointer whitespace-nowrap flex items-center gap-2
+                ${activeTab === tab.key
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-400 hover:text-gray-700'}`}
+            >
+              <Icon className="w-4 h-4" />
+              {tab.label}
+              {tab.count !== null && tab.count > 0 && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold
+                  ${activeTab === tab.key
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-200 text-gray-500'}`}>
+                  {tab.count}
+                </span>
               )}
-            </tbody>
-          </table>
-        </div>
+            </button>
+          );
+        })}
       </div>
 
-      {/* ── Exams Table ── */}
+      {/* ── Tab Content ── */}
       <div className="bg-white border border-gray-100 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-gray-900">
-            Assigned Exams ({exams.length})
-          </p>
-          <button
-            onClick={(e) => { e.stopPropagation(); setModal('assignExam'); }}
-            className="text-xs bg-blue-600 text-white px-3.5 py-2 rounded-lg
-                       hover:bg-blue-700 transition-colors"
-          >
-            + Assign Exam
-          </button>
-        </div>
+        {/* Students Tab */}
+        {activeTab === 'students' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-900">
+                Students ({students.length})
+              </p>
+              <button onClick={(e) => { e.stopPropagation(); setModal('addStudent'); }}
+                className="text-xs bg-blue-600 text-white px-3.5 py-2 rounded-lg
+                           hover:bg-blue-700 transition-colors">
+                + Add Student
+              </button>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left border-b border-gray-100">
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Exam Name</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Duration</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Status</th>
-                <th className="pb-2.5 text-[11px] font-medium text-gray-400
-                               tracking-wide">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {exams.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-10 text-center text-sm text-gray-300">
-                    No exams assigned yet
-                  </td>
-                </tr>
-              ) : (
-                exams.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="py-2.5 font-medium text-gray-900">{e.title}</td>
-                    <td className="py-2.5 text-gray-400 text-xs">
-                      {e.duration ? `${e.duration} min` : '—'}
-                    </td>
-                    <td className="py-2.5">
-                      <StatusBadge exam={e} />
-                    </td>
-                    <td className="py-2.5">
-                      <div
-                        className="flex items-center gap-3"
-                        onClick={(ev) => ev.stopPropagation()}
-                      >
-                        <button
-                          onClick={(ev) => handleRemoveExam(ev, e.id)}
-                          disabled={actionPending && confirmRemoveExamId === e.id}
-                          className={`text-[12px] transition-colors disabled:opacity-50
-                                      ${confirmRemoveExamId === e.id
-                              ? 'text-red-600 font-semibold'
-                              : 'text-red-400 hover:text-red-600'}`}
-                        >
-                          {confirmRemoveExamId === e.id ? 'Sure?' : 'Remove'}
-                        </button>
-                        {confirmRemoveExamId === e.id && (
-                          <button
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              setConfirmRemoveExamId(null);
-                            }}
-                            className="text-[12px] text-gray-400 hover:text-gray-700
-                                       transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b border-gray-100">
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide w-8">#</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Name</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Email</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Actions</th>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {students.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-sm text-gray-300">
+                        No students yet — add your first one
+                      </td>
+                    </tr>
+                  ) : (
+                    students.map((s, idx) => (
+                      <tr key={s.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-2.5 text-gray-400 text-xs">{idx + 1}</td>
+                        <td className="py-2.5 font-medium text-gray-900">{s.name}</td>
+                        <td className="py-2.5 text-gray-400 text-xs">{s.email || '—'}</td>
+                        <td className="py-2.5">
+                          <div className="flex items-center gap-3"
+                            onClick={(e) => e.stopPropagation()}>
+                            <button onClick={(e) => handleRemoveStudent(e, s.id)}
+                              disabled={actionPending && confirmRemoveStudentId === s.id}
+                              className={`text-[12px] transition-colors disabled:opacity-50
+                                ${confirmRemoveStudentId === s.id
+                                  ? 'text-red-600 font-semibold'
+                                  : 'text-red-400 hover:text-red-600'}`}>
+                              {confirmRemoveStudentId === s.id ? 'Sure?' : 'Remove'}
+                            </button>
+                            {confirmRemoveStudentId === s.id && (
+                              <button onClick={(e) => {
+                                e.stopPropagation(); setConfirmRemoveStudentId(null);
+                              }} className="text-[12px] text-gray-400 hover:text-gray-700
+                                           transition-colors">Cancel</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Exams Tab */}
+        {activeTab === 'exams' && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-gray-900">
+                Assigned Exams ({exams.length})
+              </p>
+              <button onClick={(e) => { e.stopPropagation(); setModal('assignExam'); }}
+                className="text-xs bg-blue-600 text-white px-3.5 py-2 rounded-lg
+                           hover:bg-blue-700 transition-colors">
+                + Assign Exam
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left border-b border-gray-100">
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Exam Name</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Duration</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Status</th>
+                    <th className="pb-2.5 text-[11px] font-medium text-gray-400
+                                   tracking-wide">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {exams.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="py-10 text-center text-sm text-gray-300">
+                        No exams assigned yet
+                      </td>
+                    </tr>
+                  ) : (
+                    exams.map((e) => (
+                      <tr key={e.id} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-2.5 font-medium text-gray-900">{e.title}</td>
+                        <td className="py-2.5 text-gray-400 text-xs">
+                          {e.duration ? `${e.duration} min` : '—'}
+                        </td>
+                        <td className="py-2.5"><StatusBadge exam={e} /></td>
+                        <td className="py-2.5">
+                          <div className="flex items-center gap-3"
+                            onClick={(ev) => ev.stopPropagation()}>
+                            <button onClick={(ev) => handleRemoveExam(ev, e.id)}
+                              disabled={actionPending && confirmRemoveExamId === e.id}
+                              className={`text-[12px] transition-colors disabled:opacity-50
+                                ${confirmRemoveExamId === e.id
+                                  ? 'text-red-600 font-semibold'
+                                  : 'text-red-400 hover:text-red-600'}`}>
+                              {confirmRemoveExamId === e.id ? 'Sure?' : 'Remove'}
+                            </button>
+                            {confirmRemoveExamId === e.id && (
+                              <button onClick={(ev) => {
+                                ev.stopPropagation(); setConfirmRemoveExamId(null);
+                              }} className="text-[12px] text-gray-400 hover:text-gray-700
+                                           transition-colors">Cancel</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {/* Content Tab */}
+        {activeTab === 'content' && (
+          <BatchContent batch={batch} totalStudents={students.length} />
+        )}
       </div>
     </div>
   );

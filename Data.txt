@@ -1,94 +1,175 @@
-Updated reusable UI system with Tailwind CSS v4 + centralized semantic theme tokens, components: `Card`, `Button`, `Badge`, `Loader`, `EmptyState`, `Table`, Reusable component`Card`, `Badge`, `Button`, `ConfirmDialog`, `EmptyState`, `Input`, `Loader`, `PageHeader`, `Skeleton`, `Table`, `Textarea`, UI style: compact, modern, minimal, rounded, mobile-first, scalable component architecture with reusable variants, consistent spacing system, semantic Tailwind utilities, clean admin dashboards, responsive exam interfaces, and reduced duplicated Tailwind classes.
+Service & Context Summary
+=====================================
+Last updated to reflect all functions and behaviors in the current codebase.
+
+exam.service.js
+---------------
+Schema:
+  exams/{examId}
+    title, grade, duration, scheduledAt, windowEnd, tags, sections[],
+    totalMarks, totalQuestions, isActive, isResultPublished, googleForm{},
+    createdAt
+
+  questions/{qId}
+    examId, sectionId, text, imageUrl, options{A/B/C/D}, correctAnswer,
+    marks, explanation, explanationImageUrl, tags, order, imageSize,
+    googleFormItemId, isNameField, isEmailField
+
+Functions:
+  - createExam(examData, sections)           // creates exam + all questions in a batch
+  - getExams()                               // all exams ordered by createdAt desc
+  - getExam(examId)                          // single exam doc
+  - getExamsByIds(examIds)                   // fetches multiple exams by ID array (chunks of 30)
+  - getExamQuestions(examId, sections)       // questions sorted by section order, then question order
+  - getFullExam(examId)                      // exam + questions combined
+  - checkExamAccess(exam, userProfile)       // validates active, time window, and grade match
+  - updateExam(examId, data)                 // partial update
+  - toggleExamActive(examId, isActive)
+  - toggleExamResults(examId, isResultPublished)
+  - updateExamFull(examId, examData, sections, originalQuestionIds)
+                                             // syncs questions: updates existing, adds new, deletes removed; rescore after
+  - deleteExam(examId)                       // deletes all associated questions, submissions, and the exam doc
+
+Internal helpers: sortOptions, normalizeQuestion, sortQuestions
 
 
-## 📁 batch.service.js
-**Schema:** `batches/{batchId}` → `name, grade, year, examIds[], createdAt`
+batch.service.js
+----------------
+Schema:
+  batches/{batchId}
+    name, grade, year, examIds[], createdAt
 
-**Functions:**
-- `createBatch` · `getBatches` · `getBatchesByGrade` · `getBatch`
-- `getBatchStudentCount` · `getBatchStudents` · `getBatchExams` (reads from `examIds[]`)
-- `assignExamToBatch` · `removeExamFromBatch`
-- `getStudentsByGrade` (queries `users` by grade+role)
-- `addStudentToBatch` · `removeStudentFromBatch` (sets `batchId` on user doc)
-- `updateBatch` · `deleteBatch`
-
----
-
-## 📁 exam.service.js
-**Schema:** `exams/{examId}` → `title, grade, duration, scheduledAt, windowEnd, tags, sections[], totalMarks, totalQuestions, isActive, isResultPublished, googleForm{}, createdAt`
-`questions/{qId}` → `examId, sectionId, text, imageUrl, options{A/B/C/D}, correctAnswer, marks, explanation, tags, order, googleFormItemId, isNameField, isEmailField`
-
-**Functions:**
-- `createExam` · `getExams` · `getExam` · `getExamQuestions` · `getFullExam`
-- `checkExamAccess` (validates active, time window, grade)
-- `updateExam` · `toggleExamActive` · `toggleExamResults`
-- `updateExamFull` (syncs questions — updates existing, adds new, deletes removed)
-- `deleteExam` (deletes exam + all questions)
-
----
-
-## 📁 googleForm.service.js
-**No Firestore schema** — calls an external Apps Script URL.
-
-**Functions:**
-- `extractFromGoogleForm(formUrl, durationMins)` — GET to Apps Script, returns exam structure
-- `submitToGoogleForm({token, studentName, studentEmail, answers, questions, timedOut})` — POST to Apps Script
-- `convertAnswers` (internal) — maps Firebase `{qId: "A"}` → Google Form `{itemId: "optionText"}`, auto-fills name/email fields
-
----
-
-## 📁 student.service.js
-**Schema:** `users/{uid}` → `name, email, role, grade (string), batchId`
-
-**Functions:**
-- `createStudent` — creates Firebase Auth (via `secondaryAuth`) + Firestore profile
-- `getStudents` · `getStudent`
-- `updateStudent` (normalizes grade to string)
-- `resetStudentPassword` (sends Firebase reset email)
-- `deleteStudent` (removes Firestore doc only; Auth account remains)
-getStudentByEmail
-
----
-
-## 📁 submission.service.js
-**Schema:** `submissions/{id}` → `userId, examId, batchId, answers{}, score, correct, wrong, skipped, totalQuestions, totalMarks, percentage, timeTaken, submittedAt`
-
-**Functions:**
-- `submitExam` — checks duplicate → calculates score → saves submission
-- `checkAlreadySubmitted` · `fetchSubmission` (by userId+examId) · `fetchSubmissionById`
-- `fetchExamSubmissions` (all for an exam) · `fetchStudentSubmissions` (all for a student)
-- `deleteSubmission` · `getSubmissionCount`
-- `calculateScore` (internal) — tallies correct/wrong/skipped
+Functions:
+  - createBatch
+  - getBatches
+  - getBatchesByGrade
+  - getBatch
+  - getBatchStudentCount
+  - getBatchStudents
+  - getBatchExams(batchId)                   // reads examIds[] from batch, then fetches all exams
+  - assignExamToBatch(batchId, examId)
+  - removeExamFromBatch(batchId, examId)
+  - getStudentsByGrade(grade)                // queries users by grade + role='student' (handles number/string mismatch)
+  - addStudentToBatch(userId, batchId)
+  - removeStudentFromBatch(userId)           // clears batchId on user doc
+  - updateBatch
+  - deleteBatch
 
 
-## 🔐 AuthContext.jsx
+googleForm.service.js
+---------------------
+No Firestore schema – calls external Apps Script URL.
 
-**State:** `currentUser` (Firebase Auth user), `userProfile` (Firestore user doc), `loading`
+Functions:
+  - extractFromGoogleForm(formUrl, durationMins)  // GET request, returns exam structure
+  - submitToGoogleForm({token, studentName, studentEmail, answers, questions, timedOut})
+                                                  // POST to Apps Script
+  - convertAnswers (internal)                     // maps Firebase {qId: "A"} → Google Form {itemId: "optionText"}
 
-**Functions:**
-- `login(email, password)` — `signInWithEmailAndPassword`
-- `logout()` — `signOut`
-- `onAuthStateChanged` (effect) — on login, auto-fetches `users/{uid}` from Firestore into `userProfile`
 
-**Hook:** `useAuth()` → exposes `{ currentUser, userProfile, login, logout, loading }`
+student.service.js
+------------------
+Schema:
+  users/{uid}
+    name, email, role, grade (string), batchId, disabled (boolean)
 
----
+Functions:
+  - createStudent                               // creates Auth (via secondaryAuth) + Firestore profile; cleans up Auth on failure
+  - getStudents
+  - getStudent
+  - updateStudent(uid, data)                    // normalizes grade to string
+  - resetStudentPassword(email)                 // sends Firebase password reset email
+  - deleteStudent(uid)                          // soft-delete: sets { disabled: true }
+  - enableStudent(uid)                          // sets { disabled: false }
+  - changeStudentPassword(currentUser, currentPassword, newPassword)
+                                                // reauth + password update for the currently signed-in user
+  - getStudentByEmail(email)                    // lookup by email (for bulk imports)
 
-## 📝 ExamContext.jsx
 
-**State:** `exam` (full exam+questions), `loading`, `error`, `currentQuestionId`, `answers{}`, `visitedQuestions` (Set)
+submission.service.js
+---------------------
+Schema:
+  submissions/{id}
+    userId, examId, batchId, answers{}, score, correct, wrong, skipped,
+    totalQuestions, totalMarks, percentage, timeTaken, submittedAt
 
-**localStorage keys** (per examId+uid):
-- `exam_{id}_{uid}_answers` · `_position` · `_timeLeft`
+Functions:
+  - submitExam({userId, examId, batchId, answers, questions, timeTaken, skipDuplicateCheck})
+                                                // calculates score, saves submission, returns result
+  - importSubmission({userId, examId, batchId, answers, questions, overwrite})
+                                                // bulk import/overwrite a submission
+  - checkAlreadySubmitted(userId, examId)
+  - fetchSubmission(userId, examId)
+  - fetchSubmissionById(submissionId)
+  - fetchExamSubmissions(examId)
+  - fetchStudentSubmissions(userId)
+  - deleteSubmission
+  - getSubmissionCount
+  - rescoreExamSubmissions(examId)              // rescore all submissions for an exam after question edits
 
-**Logic on load:**
-1. Fetches full exam via `getFullExam`
-2. Runs `checkExamAccess` (active, time window, grade)
-3. Checks `checkAlreadySubmitted` → redirects to `/results/{examId}` if true
-4. Restores answers + position from localStorage if available
+Internal: calculateScore(answers, questions)
 
-**Functions:**
-- `markVisited(questionId)` — adds to visited Set
-- `clearExamStorage()` — removes all 3 localStorage keys for this exam
 
-**Hook:** `useExam()` → exposes `{ exam, loading, error, currentQuestionId, setCurrentQuestionId, answers, setAnswers, visitedQuestions, markVisited, clearExamStorage }`
+AuthContext.jsx
+---------------
+State: currentUser, userProfile, loading, profileError
+
+Functions:
+  - login(email, password)
+  - logout()
+  - refreshProfile()
+  - onAuthStateChanged → auto-fetches users/{uid} into userProfile
+
+Derived:
+  - isAdmin  (userProfile?.role === "admin")
+  - isStudent (userProfile?.role === "student")
+
+Hook: useAuth() → { currentUser, userProfile, loading, profileError, login, logout, refreshProfile, isAdmin, isStudent }
+
+
+ExamContext.jsx
+---------------
+State: exam (full exam + questions), loading, error, currentQuestionId, answers{}, visitedQuestions (Set)
+
+localStorage keys (per examId + uid):
+  exam_{id}_{uid}_answers
+  exam_{id}_{uid}_position
+  exam_{id}_{uid}_timeLeft
+  exam_{id}_{uid}_startedAt
+  exam_{id}_{uid}_gformDone
+
+On load:
+  1. Fetches full exam via getFullExam
+  2. Checks checkExamAccess (active, time window, grade)
+  3. Checks checkAlreadySubmitted → redirects to /student/results/{examId} if true
+  4. Restores answers, position, validates stale timer data
+  5. Defaults first question and marks it visited
+
+Functions:
+  - markVisited(questionId)
+  - clearExamStorage()          // removes all localStorage keys for this exam
+
+Hook: useExam() → { exam, loading, error, currentQuestionId, setCurrentQuestionId, answers, setAnswers, visitedQuestions, markVisited, clearExamStorage }
+
+
+StudentDataContext.jsx
+---------------------
+Purpose: Fetches a student’s batch, assigned exams, and all submissions once; shares
+         across student-side pages to avoid repeated API calls on tab switches.
+
+State: exams[], submissions[], loading, error
+
+Flow:
+  1. Reads userProfile.batchId
+  2. Fetches batch doc + all student submissions in parallel
+  3. Uses getExamsByIds(batch.examIds) to bulk-fetch exam details
+  4. Keeps previous data visible while refreshing (no flickering skeleton)
+
+Hook: useStudentData() → { exams, submissions, loading, error, refresh }
+
+
+UI System Note
+--------------
+All components use a centralized, semantic Tailwind CSS v4 token set with compact,
+modern styling. Reusable primitives: Card, Button, Badge, ConfirmDialog, EmptyState,
+Input, Loader, PageHeader, Skeleton, Table, Textarea. Mobile-first, scalable.

@@ -34,6 +34,7 @@ import {
   query,
   where,
   orderBy,
+  documentId,
 } from "firebase/firestore";
 import { db, auth, secondaryAuth } from "../firebase";
 
@@ -150,4 +151,44 @@ export async function getStudentByEmail(email) {
   const snap = await getDocs(q);
   if (snap.empty) return null;
   return { id: snap.docs[0].id, ...snap.docs[0].data() };
+}
+
+/**
+ * Batch-fetch student profiles by user ID array.
+ * Uses Firestore `whereIn` in chunks of 30 (Firestore limit).
+ * Returns a map { [uid]: studentData } for O(1) lookup.
+ *
+ * 1000 students = ~34 queries instead of 1000 individual reads.
+ *
+ * @param {string[]} ids  Array of user UIDs
+ * @returns {Promise<Record<string, object>>}
+ */
+export async function getStudentsByIds(ids) {
+  if (!ids || ids.length === 0) return {};
+
+  // Deduplicate
+  const unique = [...new Set(ids)];
+
+  // Split into chunks of 30 (Firestore whereIn limit)
+  const chunks = [];
+  for (let i = 0; i < unique.length; i += 30) {
+    chunks.push(unique.slice(i, i + 30));
+  }
+
+  const map = {};
+
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(
+        collection(db, 'users'),
+        where(documentId(), 'in', chunk)
+      );
+      const snap = await getDocs(q);
+      snap.forEach((doc) => {
+        map[doc.id] = { id: doc.id, ...doc.data() };
+      });
+    })
+  );
+
+  return map;
 }

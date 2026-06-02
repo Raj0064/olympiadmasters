@@ -5,7 +5,7 @@ import { ExamContext } from "../context/ExamContext";
 import ExamProvider from "../context/ExamContext";
 import { useAuth } from "../context/AuthContext";
 import { submitExam } from "../services/submission.service";
-import { submitToGoogleForm } from "../services/googleForm.service";
+//import { submitToGoogleForm } from "../services/googleForm.service";
 import useTimer from "../hooks/useTimer";
 import ExamTopBar from "../components/exam/ExamTopBar";
 import SectionTabs from "../components/exam/SectionTabs";
@@ -146,30 +146,30 @@ function ExamRoomContent() {
       setSubmitResult(result);
 
       // Google Form mirror (non-fatal, already non-blocking — no change needed)
-      if (exam.googleForm?.linked && exam.googleForm?.token) {
-        const gformKey = `exam_${exam.id}_${currentUser.uid}_gformDone`;
-        if (!localStorage.getItem(gformKey)) {
-          retryAsync(
-            () => submitToGoogleForm({
-              token: exam.googleForm.token,
-              studentName: userProfile.name || "",
-              studentEmail: userProfile.email || currentUser.email || "",
-              answers: answersRef.current,
-              questions: exam.questions,
-              timedOut: isExpired,
-            }),
-            3,
-            2000
-          )
-            .then(() => localStorage.setItem(gformKey, "1"))
-            .catch((err) => console.warn("Google Form submit failed:", err.message));
-        }
-      }
-    } catch (err) {
-      console.error("Submission failed:", err.message);
-      submittingRef.current = false;
-    } finally {
-      setSubmitting(false);   // ✅ was missing from success path — caused stuck spinner edge case
+      //     if (exam.googleForm?.linked && exam.googleForm?.token) {
+      //       const gformKey = `exam_${exam.id}_${currentUser.uid}_gformDone`;
+      //       if (!localStorage.getItem(gformKey)) {
+      //         retryAsync(
+      //           () => submitToGoogleForm({
+      //             token: exam.googleForm.token,
+      //             studentName: userProfile.name || "",
+      //             studentEmail: userProfile.email || currentUser.email || "",
+      //             answers: answersRef.current,
+      //             questions: exam.questions,
+      //             timedOut: isExpired,
+      //           }),
+      //           3,
+      //           2000
+      //         )
+      //           .then(() => localStorage.setItem(gformKey, "1"))
+      //           .catch((err) => console.warn("Google Form submit failed:", err.message));
+      //       }
+      //     }
+        } catch (err) {
+          console.error("Submission failed:", err.message);
+          submittingRef.current = false;
+        } finally {
+          setSubmitting(false);   // ✅ was missing from success path — caused stuck spinner edge case
     }
   }, [exam, durationSeconds, isExpired, currentUser, userProfile, clearExamStorage]);
 
@@ -219,9 +219,12 @@ function ExamRoomContent() {
       </div>
 
       {/* ── Section Tabs ── */}
-      <div className="shrink-0 border-b border-border bg-surface overflow-x-auto scrollbar-none">
-        <SectionTabs />
-      </div>
+
+      {exam?.sections && exam.sections.length > 1 && (
+        <div className="shrink-0 border-b border-border bg-surface overflow-x-auto scrollbar-none">
+          <SectionTabs />
+        </div>
+      )}
 
       {/* ── Main Area ── */}
       <div className="flex flex-1 overflow-hidden">

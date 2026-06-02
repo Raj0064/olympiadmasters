@@ -385,7 +385,7 @@ function QuestionCard({ question, originalIndex, studentAnswer }) {
               </p>
             </div>
             {question.explanation && (
-              <p className="text-sm text-text-dark leading-relaxed">
+              <p className="text-sm text-text-dark leading-relaxed whitespace-pre-wrap break-words">
                 {question.explanation}
               </p>
             )}

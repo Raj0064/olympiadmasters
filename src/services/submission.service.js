@@ -262,3 +262,14 @@ export async function getSubmissionCount(examId) {
     return 0;
   }
 }
+
+
+//  * Marks a submission as submitted to Google Form.
+//  * Call this after a successful submitToGoogleForm() from the admin panel.
+
+export async function markGFormSubmitted(submissionId) {
+  await updateDoc(doc(db, "submissions", submissionId), {
+    googleFormSubmitted: true,
+    googleFormSubmittedAt: serverTimestamp(),
+  });
+}
